@@ -1,0 +1,17 @@
+{
+  "id": "pdf-as-journal",
+  "title": "PDF as Journal",
+  "description": "Import a PDF as a Journal Entry keeping its layout: columns, headings, formatting and images (with transparent backgrounds when possible).",
+  "version": "0.1.0",
+  "authors": [{ "name": "Ailton Neiva" }],
+  "compatibility": { "minimum": "12", "verified": "13.351" },
+  "esmodules": ["scripts/main.js"],
+  "styles": ["styles/pdf-as-journal.css"],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "pt-BR", "name": "Português (Brasil)", "path": "lang/pt-BR.json" }
+  ],
+  "url": "https://github.com/juninhoneiva/pdfasajournal",
+  "manifest": "https://github.com/juninhoneiva/pdfasajournal/releases/latest/download/module.json",
+  "download": "https://github.com/juninhoneiva/pdfasajournal/releases/latest/download/module.zip"
+}

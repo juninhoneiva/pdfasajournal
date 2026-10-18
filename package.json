@@ -1,0 +1,15 @@
+{
+  "name": "pdf-as-journal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Foundry VTT module: import a PDF as a Journal Entry preserving layout (columns, headings, images).",
+  "scripts": {
+    "vendor": "node tools/vendor-pdfjs.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.100",
+    "pdfjs-dist": "5.4.296"
+  }
+}

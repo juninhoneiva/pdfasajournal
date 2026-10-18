@@ -1,0 +1,41 @@
+{
+  "PDFJ": {
+    "Button": "Import PDF",
+    "Title": "Import PDF as Journal",
+    "Import": "Import",
+    "DropHint": "Click or drop a PDF file here",
+    "NoFile": "No file selected",
+    "PageLabel": "Page {n}",
+    "Done": "Journal \"{name}\" created with {pages} page(s).",
+    "Error": "PDF import failed: {message}",
+    "Section": { "Journal": "Journal", "Layout": "Layout", "Images": "Images" },
+    "Field": {
+      "Name": "Journal name",
+      "Folder": "Folder",
+      "Pages": "Pages",
+      "PagesHint": "Leave empty to import every page. Example: 1-10, 15, 20-",
+      "ColumnMode": "Columns",
+      "ColumnModeHint": "Faithful: keeps columns and column breaks exactly as in the PDF. Flowing: text reflows between columns when the window is resized.",
+      "RemoveHeaders": "Remove running headers, footers and page numbers",
+      "JoinHyphens": "Join words hyphenated at line ends",
+      "Images": "Extract images",
+      "Transparent": "Transparent background",
+      "TransparentHint": "Images that are already transparent in the PDF keep their transparency. For the others, the flat background touching the edges is removed; photos and framed illustrations are left untouched.",
+      "Tolerance": "Background color tolerance",
+      "PageBackgrounds": "Include full-page background images",
+      "SkipRepeated": "Skip repeated ornaments",
+      "SkipRepeatedHint": "Images repeated on many pages (frames, flourishes) are left out.",
+      "MaxImageSize": "Maximum image size (px)"
+    },
+    "ColumnMode": { "Grid": "Faithful to the PDF", "Flow": "Flowing" },
+    "Progress": {
+      "Read": "Reading page {current} of {total}...",
+      "Layout": "Building the layout...",
+      "Create": "Creating the journal..."
+    },
+    "Settings": {
+      "ImageSource": { "Name": "File source", "Hint": "FilePicker source where images are stored (usually \"data\")." },
+      "ImageDirectory": { "Name": "Image folder", "Hint": "Folder for extracted images. Empty: worlds/<world>/pdf-as-journal" }
+    }
+  }
+}

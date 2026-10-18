@@ -1,0 +1,88 @@
+<div class="pdfj-body">
+<section class="standard-form">
+  <div class="pdfj-dropzone">
+    <i class="fa-solid fa-file-pdf fa-2x"></i>
+    <p>{{localize "PDFJ.DropHint"}}</p>
+    <strong class="pdfj-file-name">{{localize "PDFJ.NoFile"}}</strong>
+    <input type="file" name="pdfFile" accept="application/pdf,.pdf" hidden>
+  </div>
+
+  <fieldset>
+    <legend>{{localize "PDFJ.Section.Journal"}}</legend>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Name"}}</label>
+      <input type="text" name="name" value="">
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Folder"}}</label>
+      <select name="folder">
+        <option value="">—</option>
+        {{#each folders}}<option value="{{id}}">{{name}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Pages"}}</label>
+      <input type="text" name="pages" value="{{options.pages}}" placeholder="1-10, 15">
+      <p class="hint">{{localize "PDFJ.Field.PagesHint"}}</p>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "PDFJ.Section.Layout"}}</legend>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.ColumnMode"}}</label>
+      <select name="columnMode">
+        {{selectOptions columnModes selected=options.columnMode localize=true}}
+      </select>
+      <p class="hint">{{localize "PDFJ.Field.ColumnModeHint"}}</p>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.RemoveHeaders"}}</label>
+      <input type="checkbox" name="removeHeadersFooters" {{checked options.removeHeadersFooters}}>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.JoinHyphens"}}</label>
+      <input type="checkbox" name="joinHyphens" {{checked options.joinHyphens}}>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "PDFJ.Section.Images"}}</legend>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Images"}}</label>
+      <input type="checkbox" name="images" {{checked options.images}}>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Transparent"}}</label>
+      <input type="checkbox" name="transparentBackgrounds" {{checked options.transparentBackgrounds}}>
+      <p class="hint">{{localize "PDFJ.Field.TransparentHint"}}</p>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.Tolerance"}}</label>
+      <input type="range" name="backgroundTolerance" min="5" max="120" step="5" value="{{options.backgroundTolerance}}">
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.PageBackgrounds"}}</label>
+      <input type="checkbox" name="includePageBackgrounds" {{checked options.includePageBackgrounds}}>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.SkipRepeated"}}</label>
+      <input type="checkbox" name="skipRepeatedImages" {{checked options.skipRepeatedImages}}>
+      <p class="hint">{{localize "PDFJ.Field.SkipRepeatedHint"}}</p>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.MaxImageSize"}}</label>
+      <input type="number" name="maxImageSize" min="256" max="8192" step="256" value="{{options.maxImageSize}}">
+    </div>
+  </fieldset>
+
+  <div class="pdfj-progress" hidden>
+    <span class="pdfj-progress-label"></span>
+    <progress value="0" max="1"></progress>
+  </div>
+</section>
+
+<footer class="form-footer">
+  <button type="submit"><i class="fa-solid fa-file-import"></i> {{localize "PDFJ.Import"}}</button>
+</footer>
+</div>

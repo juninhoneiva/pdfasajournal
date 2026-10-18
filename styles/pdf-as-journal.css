@@ -1,0 +1,126 @@
+/* ---- Imported journal content ------------------------------------------------ */
+
+.pdfj-page {
+  --pdfj-gutter: 1.5em;
+}
+
+.pdfj-page .pdfj-cols {
+  display: grid;
+  column-gap: var(--pdfj-gutter);
+  align-items: start;
+  margin: 0 0 0.5em;
+}
+
+.pdfj-page .pdfj-col {
+  min-width: 0;
+}
+
+.pdfj-page .pdfj-col > :first-child {
+  margin-top: 0;
+}
+
+.pdfj-page .pdfj-flow {
+  column-gap: var(--pdfj-gutter);
+  margin: 0 0 0.5em;
+}
+
+.pdfj-page .pdfj-flow > * {
+  break-inside: avoid-column;
+}
+
+.pdfj-page p {
+  margin: 0 0 0.6em;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.pdfj-page p.pdfj-align-center,
+.pdfj-page .pdfj-align-center:is(h1, h2, h3, h4) {
+  text-align: center;
+}
+
+.pdfj-page p.pdfj-align-right {
+  text-align: right;
+}
+
+.pdfj-page p.pdfj-small {
+  font-size: 0.85em;
+}
+
+.pdfj-page .pdfj-dropcap {
+  float: left;
+  font-size: 3.2em;
+  line-height: 0.85;
+  padding: 0.05em 0.08em 0 0;
+  font-weight: bold;
+}
+
+.pdfj-page figure.pdfj-figure {
+  margin: 0.5em 0;
+  padding: 0;
+}
+
+.pdfj-page figure.pdfj-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.pdfj-page figure.pdfj-align-center img {
+  margin: 0 auto;
+}
+
+.pdfj-page figure.pdfj-align-right img {
+  margin-left: auto;
+}
+
+/* On narrow journal windows, stack the columns. */
+@container (max-width: 480px) {
+  .pdfj-page .pdfj-cols {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- Import dialog ------------------------------------------------------------ */
+
+.pdfj-app .form-group .hint {
+  flex: 0 0 100%;
+}
+
+.pdfj-app fieldset {
+  margin-bottom: 0.5rem;
+}
+
+.pdfj-app .pdfj-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.pdfj-app .pdfj-progress[hidden] {
+  display: none;
+}
+
+.pdfj-app .pdfj-progress progress {
+  width: 100%;
+}
+
+.pdfj-app .pdfj-dropzone {
+  border: 2px dashed var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.pdfj-app .pdfj-dropzone.dragover {
+  border-color: var(--color-warm-2, #ff6400);
+}
+
+.pdfj-import-button {
+  flex: 0 0 100%;
+}

@@ -1,0 +1,41 @@
+{
+  "PDFJ": {
+    "Button": "Importar PDF",
+    "Title": "Importar PDF como Journal",
+    "Import": "Importar",
+    "DropHint": "Clique ou arraste um arquivo PDF para cá",
+    "NoFile": "Nenhum arquivo selecionado",
+    "PageLabel": "Página {n}",
+    "Done": "Journal \"{name}\" criado com {pages} página(s).",
+    "Error": "Falha ao importar o PDF: {message}",
+    "Section": { "Journal": "Journal", "Layout": "Layout", "Images": "Imagens" },
+    "Field": {
+      "Name": "Nome do journal",
+      "Folder": "Pasta",
+      "Pages": "Páginas",
+      "PagesHint": "Deixe em branco para importar todas. Exemplo: 1-10, 15, 20-",
+      "ColumnMode": "Colunas",
+      "ColumnModeHint": "Fiel: mantém as colunas e as quebras exatamente como no PDF. Fluida: o texto se redistribui entre as colunas quando a janela muda de tamanho.",
+      "RemoveHeaders": "Remover cabeçalhos, rodapés e números de página",
+      "JoinHyphens": "Juntar palavras hifenizadas no fim da linha",
+      "Images": "Extrair imagens",
+      "Transparent": "Fundo transparente",
+      "TransparentHint": "Imagens que já têm transparência no PDF a mantêm. Nas demais, o fundo liso que toca as bordas é removido; fotos e ilustrações emolduradas ficam como estão.",
+      "Tolerance": "Tolerância de cor do fundo",
+      "PageBackgrounds": "Incluir imagens de fundo de página",
+      "SkipRepeated": "Ignorar ornamentos repetidos",
+      "SkipRepeatedHint": "Imagens que se repetem em muitas páginas (molduras, vinhetas) são omitidas.",
+      "MaxImageSize": "Tamanho máximo da imagem (px)"
+    },
+    "ColumnMode": { "Grid": "Fiel ao PDF", "Flow": "Fluida" },
+    "Progress": {
+      "Read": "Lendo página {current} de {total}...",
+      "Layout": "Montando o layout...",
+      "Create": "Criando o journal..."
+    },
+    "Settings": {
+      "ImageSource": { "Name": "Origem dos arquivos", "Hint": "Origem do FilePicker onde as imagens são gravadas (normalmente \"data\")." },
+      "ImageDirectory": { "Name": "Pasta das imagens", "Hint": "Pasta onde as imagens extraídas são gravadas. Em branco: worlds/<mundo>/pdf-as-journal" }
+    }
+  }
+}
