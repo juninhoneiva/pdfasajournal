@@ -220,6 +220,8 @@ export function renderPage(layout, stats, options = {}) {
   let html = "";
   for (const image of layout.underlays) html += renderFigure(image, container, "pdfj-underlay");
   html += renderNode(layout.tree, container, stats, options);
+  const page = { x0: 0, x1: layout.width };
+  for (const image of layout.fullPage ?? []) html += renderFigure(image, page, "pdfj-fullpage");
   return `<div class="pdfj-page">${html}</div>`;
 }
 

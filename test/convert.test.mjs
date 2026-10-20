@@ -104,3 +104,15 @@ test("removeBackground keeps enclosed areas", () => {
   assert.equal(data[3], 0, "corner is transparent");
   assert.equal(data[(10 * w + 10) * 4 + 3], 255, "hole inside the drawing stays opaque");
 });
+
+test("full-page illustration is kept; spread background, flat mask, side tab and page number are not", async () => {
+  const { result, images } = await convert("art-page.pdf");
+  const html = result.pages[0].html;
+  assert.equal(images.length, 1, "only the artwork is saved");
+  assert.equal((html.match(/<img/g) ?? []).length, 1);
+  assert.match(html, /pdfj-fullpage/);
+  assert.match(html, /INTRODUCAO/);
+  assert.doesNotMatch(html, />S<|SERPENT|S E R/);
+  assert.doesNotMatch(html, /176/);
+  assert.ok(html.indexOf("INTRODUCAO") < html.indexOf("<img"), "title before the artwork");
+});

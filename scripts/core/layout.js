@@ -111,6 +111,30 @@ export function buildLines(spans) {
   return lines;
 }
 
+/**
+ * Text set vertically one letter per line (side tabs such as "S/E/R/P/E/N/T") shows up as a
+ * stack of single-character lines sharing the same x center. Like rotated text, it is decoration
+ * that would read as noise in the journal, so it is removed.
+ */
+function dropStackedLetters(lines) {
+  const singles = lines.filter(l => l.chars === 1 && lineText(l).length === 1);
+  if (singles.length < 4) return lines;
+  singles.sort((a, b) => a.top - b.top);
+  const stacks = [];
+  for (const line of singles) {
+    const cx = (line.x0 + line.x1) / 2;
+    const stack = stacks.find(st => {
+      const last = st.at(-1);
+      const lastCx = (last.x0 + last.x1) / 2;
+      return Math.abs(cx - lastCx) < 0.6 * line.size && line.top - last.bottom < 1.5 * line.size;
+    });
+    if (stack) stack.push(line);
+    else stacks.push([line]);
+  }
+  const drop = new Set(stacks.filter(st => st.length >= 4).flat());
+  return drop.size ? lines.filter(l => !drop.has(l)) : lines;
+}
+
 /** Re-joins line segments that share a baseline inside one block (e.g. "Name ...... value"). */
 function mergeSameBaseline(lines) {
   const bands = baselineBands(lines.flatMap(l => l.spans));
@@ -443,14 +467,19 @@ function textCoverage(image, lines) {
  */
 export function layoutPage(page) {
   const spans = page.spans.filter(s => !s.drop);
-  const lines = buildLines(spans);
+  const lines = dropStackedLetters(buildLines(spans));
   const images = page.images.filter(i => !i.drop && i.src);
 
   // Images with lots of text printed over them (textures, maps behind text) cannot take part in the
   // cut: they would block every gutter. They are rendered separately, before the page content.
+  // Full-page artwork is shown after the page text (titles are usually printed over it).
   const underlays = [];
   const inline = [];
-  for (const image of images) (textCoverage(image, lines) > 0.08 ? underlays : inline).push(image);
+  const fullPage = [];
+  for (const image of images) {
+    if (image.art || image.background) fullPage.push(image);
+    else (textCoverage(image, lines) > 0.08 ? underlays : inline).push(image);
+  }
 
   const boxes = [...lines.map(lineBox), ...inline.map(imageBox)];
   const tree = boxes.length ? simplify(cut(boxes)) : null;
@@ -461,6 +490,7 @@ export function layoutPage(page) {
     height: page.height,
     bounds: tree?.box ?? { x0: 0, x1: page.width, top: 0, bottom: page.height },
     tree,
-    underlays
+    underlays,
+    fullPage
   };
 }

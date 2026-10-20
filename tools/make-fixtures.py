@@ -90,5 +90,25 @@ def three_columns():
     c.drawImage(os.path.join(OUT, "_photo.png"), 50, 80, 120, 120)
     c.showPage(); c.save()
 
-make_images(); two_columns(); three_columns()
+def art_page():
+    """Mimics a full-page illustration page: paper spread background, flat mask layer, artwork on
+    top, vertical side tab (one letter per line), header and page number."""
+    W, H = 594, 774
+    paper = Image.new("RGB", (400, 260), (236, 228, 210))
+    for i in range(0, 400, 7):
+        ImageDraw.Draw(paper).line((i, 0, i, 260), fill=(226, 218, 198))
+    paper.save(os.path.join(OUT, "_paper.png"))
+    Image.new("RGB", (120, 160), (255, 255, 255)).save(os.path.join(OUT, "_flat.png"))
+    c = canvas.Canvas(os.path.join(OUT, "art-page.pdf"), pagesize=(W, H))
+    c.drawImage(os.path.join(OUT, "_paper.png"), -10, -10, 1208, 794)  # two-page spread
+    c.drawImage(os.path.join(OUT, "_flat.png"), -1, -1, 596, 776)
+    c.drawImage(os.path.join(OUT, "_photo.png"), -1, -1, 596, 776)
+    c.setFont("Helvetica-Bold", 24)
+    for i, ch in enumerate("SERPENTOFYIG"):
+        c.drawString(28, H - 76 - i * 34.5, ch)
+    c.setFont("Helvetica", 12); c.drawCentredString(W / 2, H - 51, "INTRODUCAO")
+    c.setFont("Helvetica", 14); c.drawCentredString(W / 2, H - 733, "176")
+    c.showPage(); c.save()
+
+make_images(); two_columns(); three_columns(); art_page()
 print("ok")

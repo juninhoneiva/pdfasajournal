@@ -29,6 +29,8 @@ export const DEFAULT_OPTIONS = {
 };
 
 const BAND = 0.07; // top/bottom share of the page searched for running headers and footers
+const ART_TEXT_LIMIT = 300; // max body characters over a full-page image still treated as artwork
+const FLAT = Symbol("flat");
 const PAGE_NUMBER_RE = /^(?:\d{1,4}|[ivxlcdm]{1,7})$/i;
 
 /* -------------------------------------------------------------------------- */
@@ -45,7 +47,8 @@ function markRunningText(pages) {
   for (const page of pages) {
     const seen = new Set();
     for (const span of page.spans) {
-      const inBand = span.bottom < page.height * BAND || span.top > page.height * (1 - BAND);
+      const center = (span.top + span.bottom) / 2;
+      const inBand = center < page.height * BAND || center > page.height * (1 - BAND);
       if (!inBand) continue;
       const text = span.str.trim();
       if (PAGE_NUMBER_RE.test(text)) {
@@ -108,17 +111,78 @@ async function outlineTitles(doc) {
 /* Images                                                                     */
 /* -------------------------------------------------------------------------- */
 
-async function processImages(page, options, cache) {
+/** Characters of body text (outside header/footer bands) whose center lies inside the box. */
+function textCharsInside(page, box) {
+  let chars = 0;
+  for (const span of page.spans) {
+    const cx = (span.x0 + span.x1) / 2;
+    const cy = (span.top + span.bottom) / 2;
+    if (cy < page.height * BAND || cy > page.height * (1 - BAND)) continue;
+    if (cx >= box.x0 && cx <= box.x1 && cy >= box.top && cy <= box.bottom) chars += span.str.trim().length;
+  }
+  return chars;
+}
+
+/** Plain single-color images (masks, blank fills) carry nothing worth keeping. */
+function isFlat(imageData) {
+  const data = imageData.data;
+  const total = data.length >> 2;
+  const step = Math.max(1, Math.floor(total / 50000));
+  let n = 0;
+  let sum = 0;
+  let sumSq = 0;
+  let alphaMin = 255;
+  let alphaMax = 0;
+  for (let i = 0; i < total; i += step) {
+    const k = i * 4;
+    const lum = 0.299 * data[k] + 0.587 * data[k + 1] + 0.114 * data[k + 2];
+    sum += lum;
+    sumSq += lum * lum;
+    alphaMin = Math.min(alphaMin, data[k + 3]);
+    alphaMax = Math.max(alphaMax, data[k + 3]);
+    n++;
+  }
+  const mean = sum / n;
+  const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean));
+  return std < 4 && alphaMax - alphaMin < 16;
+}
+
+/**
+ * Full-page images are either backgrounds (paper textures, often spanning a two-page spread) or a
+ * full-page illustration. An image counts as artwork when it fits the page and little body text is
+ * printed over it; when several qualify, the one painted last (on top) wins.
+ */
+function classifyImages(page) {
   const pageArea = page.width * page.height;
-  const kept = [];
-  let index = 0;
   for (const image of page.images) {
     const w = Math.min(image.x1, page.width) - Math.max(image.x0, 0);
     const h = Math.min(image.bottom, page.height) - Math.max(image.top, 0);
-    if (!(w > 0 && h > 0)) continue; // outside the page
-    const area = w * h;
+    image.visibleArea = w > 0 && h > 0 ? w * h : 0;
+    if (image.visibleArea < pageArea * 0.8) {
+      image.role = "inline";
+      continue;
+    }
+    const spread = image.x1 - image.x0 > page.width * 1.15 || image.bottom - image.top > page.height * 1.15;
+    image.role = !spread && textCharsInside(page, image) < ART_TEXT_LIMIT ? "art" : "background";
+  }
+}
+
+async function processImages(page, options, cache) {
+  const pageArea = page.width * page.height;
+  classifyImages(page);
+  const kept = [];
+  let index = 0;
+  let artKept = false;
+
+  // Walk from the top layer down so the first usable "art" image found is the visible one.
+  for (const image of [...page.images].reverse()) {
+    const area = image.visibleArea;
+    if (!(area > 0)) continue; // outside the page
+    const w = Math.min(image.x1, page.width) - Math.max(image.x0, 0);
+    const h = Math.min(image.bottom, page.height) - Math.max(image.top, 0);
     if (area < pageArea * 0.002 || Math.min(w, h) < 12) continue; // specks, rules, tiny ornaments
-    const isBackground = area >= pageArea * 0.8;
+    if (image.role === "art" && artKept) continue;
+    const isBackground = image.role === "background";
     if (isBackground && !options.includePageBackgrounds) continue;
 
     const m = image.matrix;
@@ -126,16 +190,20 @@ async function processImages(page, options, cache) {
       ? `${image.objId}|${Math.round(image.x1 - image.x0)}x${Math.round(image.bottom - image.top)}|${Math.sign(m[0])}${Math.sign(m[1])}${Math.sign(m[2])}${Math.sign(m[3])}`
       : null;
     let saved = cacheKey ? cache.get(cacheKey) : null;
+    if (saved === FLAT) continue;
     if (!saved) {
       const source = sourceToCanvas(image.source, options.createCanvas);
       const canvas = source && placeImage(source, image, options.createCanvas, { maxDimension: options.maxImageSize });
       if (!canvas) continue;
-      let transparent = false;
-      if (options.transparentBackgrounds && !isBackground) {
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        transparent = hasTransparency(data);
-        if (!transparent && removeBackground(data, { tolerance: options.backgroundTolerance })) {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (isFlat(data)) {
+        if (cacheKey) cache.set(cacheKey, FLAT);
+        continue;
+      }
+      let transparent = hasTransparency(data);
+      if (options.transparentBackgrounds && !isBackground && !transparent) {
+        if (removeBackground(data, { tolerance: options.backgroundTolerance })) {
           ctx.putImageData(data, 0, 0);
           transparent = true;
         }
@@ -144,17 +212,19 @@ async function processImages(page, options, cache) {
       if (!saved?.src) continue;
       if (cacheKey) cache.set(cacheKey, saved);
     }
+    if (image.role === "art") artKept = true;
     kept.push({
-      x0: image.x0,
-      x1: image.x1,
-      top: image.top,
-      bottom: image.bottom,
+      x0: Math.max(image.x0, 0),
+      x1: Math.min(image.x1, page.width),
+      top: Math.max(image.top, 0),
+      bottom: Math.min(image.bottom, page.height),
       src: saved.src,
       key: saved.key ?? saved.src,
-      background: isBackground
+      background: isBackground,
+      art: image.role === "art"
     });
   }
-  page.images = kept;
+  page.images = kept.reverse();
 }
 
 /* -------------------------------------------------------------------------- */
