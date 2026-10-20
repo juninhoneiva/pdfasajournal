@@ -51,6 +51,27 @@
   font-size: 0.85em;
 }
 
+.pdfj-page table.pdfj-table {
+  width: auto;
+  border: none;
+  border-collapse: collapse;
+  margin: 0.2em 0 0.6em;
+  background: none;
+}
+
+.pdfj-page table.pdfj-table td {
+  border: none;
+  padding: 0.05em 1em 0.05em 0;
+  vertical-align: top;
+  text-align: left;
+  background: none;
+}
+
+.pdfj-page table.pdfj-table tr {
+  background: none;
+  border: none;
+}
+
 .pdfj-page .pdfj-dropcap {
   float: left;
   font-size: 3.2em;
@@ -71,6 +92,25 @@
   border: none;
   box-shadow: none;
   background: none;
+}
+
+.pdfj-page figure.pdfj-float-right {
+  float: right;
+  clear: right;
+  margin: 0.2em 0 0.4em 1em;
+}
+
+.pdfj-page figure.pdfj-float-left {
+  float: left;
+  clear: left;
+  margin: 0.2em 1em 0.4em 0;
+}
+
+.pdfj-page .pdfj-col::after,
+.pdfj-page::after {
+  content: "";
+  display: block;
+  clear: both;
 }
 
 .pdfj-page figure.pdfj-align-center img {

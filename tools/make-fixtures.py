@@ -185,5 +185,42 @@ def page_break():
     c.showPage()
     c.save()
 
-make_images(); two_columns(); three_columns(); art_page(); sections(); soft_mask(); page_break()
+def overlap():
+    """Three overlapping copies of an image (fanned banknotes) plus a white translucent strip."""
+    c = canvas.Canvas(os.path.join(OUT, "overlap.pdf"), pagesize=A4)
+    W, H = A4
+    haze = Image.new("RGBA", (60, 200), (255, 255, 255, 0))
+    for y in range(200):
+        for x in range(60):
+            haze.putpixel((x, y), (255, 255, 255, int(255 * x / 60)))
+    haze.save(os.path.join(OUT, "_haze.png"))
+    c.setFont("Times-Roman", 10)
+    y = H - 80
+    for i in range(30):
+        c.drawString(320, y, words(9, i)); y -= 13
+    c.drawImage(os.path.join(OUT, "_haze.png"), 400, 300, 150, 450, mask="auto")
+    for k, (dx, dy) in enumerate([(0, 0), (12, -14), (24, -28)]):
+        c.saveState(); c.translate(60 + dx, 500 + dy); c.rotate(4 - 4 * k)
+        c.drawImage(os.path.join(OUT, "_photo.png"), 0, 0, 180, 120); c.restoreState()
+    c.showPage(); c.save()
+
+def wrap_page():
+    """A paragraph flowing around a narrow portrait on the right."""
+    c = canvas.Canvas(os.path.join(OUT, "wrap.pdf"), pagesize=A4)
+    W, H = A4
+    text = words(260, 2) + "."
+    y = H - 100
+    c.drawImage(os.path.join(OUT, "_photo.png"), W - 50 - 130, H - 340, 130, 170)
+    font, size = "Times-Roman", 10
+    remaining = text.split()
+    while remaining:
+        beside = H - 340 - 4 < y < H - 170 + 12
+        width = (W - 100 - 145) if beside else (W - 100)
+        line = ""
+        while remaining and c.stringWidth((line + " " + remaining[0]).strip(), font, size) <= width:
+            line = (line + " " + remaining.pop(0)).strip()
+        c.setFont(font, size); c.drawString(50, y, line); y -= 13
+    c.showPage(); c.save()
+
+make_images(); two_columns(); three_columns(); art_page(); sections(); soft_mask(); page_break(); overlap(); wrap_page()
 print("ok")

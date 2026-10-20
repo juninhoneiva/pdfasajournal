@@ -11,9 +11,9 @@ import { convertPdf } from "../scripts/core/convert.js";
 import { hashBytes } from "../scripts/core/util.js";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const [file, outDir, pages = ""] = process.argv.slice(2);
+const [file, outDir, pages = "", groupBy = "section"] = process.argv.slice(2);
 if (!file || !outDir) {
-  console.error("usage: node tools/preview.mjs file.pdf out-dir [pages]");
+  console.error("usage: node tools/preview.mjs file.pdf out-dir [pages] [section|page]");
   process.exit(1);
 }
 fs.mkdirSync(path.join(outDir, "img"), { recursive: true });
@@ -21,6 +21,7 @@ const pdfjsDir = path.join(root, "node_modules/pdfjs-dist");
 
 const result = await convertPdf(pdfjs, new Uint8Array(fs.readFileSync(file)), {
   pages,
+  groupBy,
   documentParams: {
     standardFontDataUrl: path.join(pdfjsDir, "standard_fonts/"),
     cMapUrl: path.join(pdfjsDir, "cmaps/"),
@@ -41,7 +42,7 @@ process.stderr.write("\n");
 
 const css = fs.readFileSync(path.join(root, "styles/pdf-as-journal.css"), "utf8");
 const body = result.pages
-  .map(p => `<article class="journal-page"><h1 class="page-title">${p.name}</h1>${p.html}</article>`)
+  .map(p => `<article class="journal-page" id="p${p.number}"><h1 class="page-title">${p.name}</h1>${p.html}</article>`)
   .join("\n");
 fs.writeFileSync(
   path.join(outDir, "index.html"),

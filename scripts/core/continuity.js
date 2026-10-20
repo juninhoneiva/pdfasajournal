@@ -18,7 +18,7 @@ const LOWER_START_RE = /^\s*\p{Ll}/u;
 function* leavesInOrder(node) {
   if (!node) return;
   if (node.type === "leaf") yield node;
-  else for (const child of node.children) yield* leavesInOrder(child);
+  else for (const child of node.children ?? []) yield* leavesInOrder(child);
 }
 
 function continues(previous, next, stats) {
@@ -53,17 +53,18 @@ export function joinContinuations(layouts, stats, { acrossColumns = false } = {}
   let joined = 0;
   for (const layout of layouts) {
     for (const leaf of leavesInOrder(layout.tree)) {
-      const index = leaf.blocks.findIndex(b => b.kind === "para");
-      const first = leaf.blocks[index];
+      const index = leaf.blocks.findIndex(b => b.kind !== "image");
+      const first = leaf.blocks[index]?.kind === "para" ? leaf.blocks[index] : null;
       const allowed = previousPage !== layout || acrossColumns;
       if (first && previous && allowed && continues(previous, first, stats)) {
         absorb(previous, first);
         leaf.blocks.splice(index, 1);
         joined++;
       }
-      const last = leaf.blocks.findLast(b => b.kind === "para");
+      // The text that ends the block (figures in between are skipped, a table ends the flow).
+      const last = leaf.blocks.findLast(b => b.kind !== "image");
       if (last) {
-        previous = last;
+        previous = last.kind === "para" ? last : null;
         previousPage = layout;
       }
     }

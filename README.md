@@ -9,16 +9,23 @@ O journal segue as seções do livro: cada título vira uma página do journal, 
 - **Colunas**: detectadas pelos espaços em branco entre os blocos de texto (corte XY recursivo). Viram uma grade CSS com as mesmas proporções do PDF (modo *Fiel*) ou colunas fluidas (modo *Fluida*). Funciona com 1, 2, 3 ou mais colunas e com títulos ocupando a largura toda acima delas.
 - **Títulos**: inferidos pelo tamanho da fonte em relação ao texto do corpo do documento inteiro (h1 a h4).
 - **Formatação**: negrito, itálico, sobrescrito, listas com marcadores, capitulares, alinhamento centralizado/à direita e texto menor (legendas, notas).
+- **Tabelas**: fichas de estatísticas (FOR, CON, TAM...), linhas de combate e outras tabelas viram `<table>` com as células alinhadas como no livro.
+- **Texto contínuo**: parágrafos que o livro quebrou na virada de página são emendados; imagens com texto em volta (retratos) flutuam ao lado do parágrafo, sem cortá-lo.
+- **Decoração**: abas laterais em fonte de símbolos, molduras de quadros, gravuras apagadas atrás do texto e fundos de página são deixados de fora.
 - **Cabeçalhos e rodapés** repetidos e números de página são removidos.
 - **Nomes das páginas**: vêm dos marcadores (sumário) do PDF; na falta deles, do título que abre a seção. Títulos no meio de uma página ficam dentro da seção e aparecem no sumário da página no Foundry.
 - **Imagens**: extraídas na resolução original, já com rotação e espelhamento aplicados, gravadas em WebP na pasta do mundo.
   - Se a imagem já tem transparência no PDF (canal alfa / SMask), ela é preservada.
   - Se não tem, o fundo liso que toca as bordas é removido (com suavização das bordas). Fotos e ilustrações com moldura são detectadas e ficam como estão.
+  - Máscaras do PDF (sombras, cantos arredondados) são aplicadas como transparência; a imagem usada como molde nunca aparece sozinha.
+  - Imagens sobrepostas (cartas em leque, foto dentro da moldura) viram uma figura só.
   - Imagens de fundo de página inteira e ornamentos repetidos em muitas páginas são ignorados (configurável).
 
 ## Como usar
 
 Na aba **Journal**, clique em **Importar PDF**, escolha ou arraste o arquivo, ajuste as opções e clique em **Importar**. O PDF é processado no próprio navegador; só as imagens extraídas são enviadas ao servidor.
+
+O campo **Páginas** usa a numeração do arquivo PDF, que pode diferir da numeração impressa no livro (capa e páginas iniciais contam).
 
 API para macros:
 
@@ -33,7 +40,8 @@ await api.importPdf({ data, fileName: "arquivo.pdf", options: { pages: "1-10", c
 ## Limitações atuais
 
 - PDFs escaneados (só imagem, sem texto) não têm texto a extrair; seria preciso OCR.
-- Desenhos vetoriais (mapas, molduras e ícones feitos de linhas) ainda não são capturados; só imagens rasterizadas.
+- Desenhos vetoriais (mapas, molduras, marcadores de lista e ícones feitos de linhas) ainda não são capturados; só imagens rasterizadas. Máscaras vetoriais (bordas rasgadas desenhadas com linhas) também não são aplicadas.
+- O fundo dos quadros de destaque (pergaminho, molduras) não é reproduzido; o conteúdo do quadro aparece normalmente.
 - A cor do texto e as fontes originais não são reproduzidas; o journal usa a tipografia do Foundry/sistema.
 - Texto girado (barras laterais verticais) é ignorado.
 - Tabelas saem como colunas de texto, não como `<table>`.

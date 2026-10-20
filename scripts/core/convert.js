@@ -126,7 +126,7 @@ function textCharsInside(page, box) {
   return chars;
 }
 
-/** Plain single-color images (masks, blank fills) carry nothing worth keeping. */
+/** Plain single-color images (masks, blank fills, translucent tints) carry nothing worth keeping. */
 function isFlat(imageData) {
   const data = imageData.data;
   const total = data.length >> 2;
@@ -134,20 +134,31 @@ function isFlat(imageData) {
   let n = 0;
   let sum = 0;
   let sumSq = 0;
-  let alphaMin = 255;
-  let alphaMax = 0;
+  let transparent = 0;
+  let partial = 0;
+  let sampled = 0;
   for (let i = 0; i < total; i += step) {
     const k = i * 4;
+    const alpha = data[k + 3];
+    sampled++;
+    if (alpha <= 8) {
+      transparent++;
+      continue; // fully transparent pixels carry no color
+    }
+    if (alpha < 240) partial++;
     const lum = 0.299 * data[k] + 0.587 * data[k + 1] + 0.114 * data[k + 2];
     sum += lum;
     sumSq += lum * lum;
-    alphaMin = Math.min(alphaMin, data[k + 3]);
-    alphaMax = Math.max(alphaMax, data[k + 3]);
     n++;
   }
+  if (!n) return true;
   const mean = sum / n;
   const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean));
-  return std < 4 && alphaMax - alphaMin < 16;
+  if (std >= 4) return false;
+  // One color. A crisp silhouette (icon, shaped shadow) is content; a blank fill or a translucent
+  // tint (white haze behind a column) is not.
+  const silhouette = transparent / sampled > 0.05 && partial / n < 0.3;
+  return !silhouette;
 }
 
 /**
@@ -170,14 +181,108 @@ function classifyImages(page) {
   }
 }
 
+/** Decodes, places, masks and (optionally) cuts out the background of one image. */
+function renderImage(image, options, isBackground) {
+  const source = sourceToCanvas(image.source, options.createCanvas);
+  const canvas = source && placeImage(source, image, options.createCanvas, { maxDimension: options.maxImageSize });
+  if (!canvas) return null;
+  let masked = false;
+  for (const mask of image.masks ?? []) masked = applyMask(canvas, image, mask, options.createCanvas) || masked;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (isFlat(data)) return FLAT;
+  let transparent = masked || hasTransparency(data);
+  if (options.transparentBackgrounds && !isBackground && !transparent) {
+    if (removeBackground(data, { tolerance: options.backgroundTolerance })) {
+      ctx.putImageData(data, 0, 0);
+      transparent = true;
+    }
+  }
+  // Masked artwork that stays mostly see-through is a faded decoration (engravings behind text).
+  let faint = false;
+  if (masked) {
+    let alpha = 0;
+    const step = Math.max(1, Math.floor(data.data.length / 4 / 50000));
+    let n = 0;
+    for (let k = 3; k < data.data.length; k += 4 * step, n++) alpha += data.data[k];
+    faint = alpha / n < 0.3 * 255;
+  }
+  return { canvas, transparent, faint };
+}
+
+function cacheKeyOf(image) {
+  if (!image.objId) return null;
+  const m = image.matrix;
+  const size = `${Math.round(image.x1 - image.x0)}x${Math.round(image.bottom - image.top)}`;
+  const orientation = `${Math.sign(m[0])}${Math.sign(m[1])}${Math.sign(m[2])}${Math.sign(m[3])}`;
+  const mask = (image.masks ?? []).map(m => m.layers.map(l => l.objId).join(",")).join("/");
+  return `${image.objId}|${size}|${orientation}|${mask}`;
+}
+
+function overlapRatio(a, b) {
+  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  if (w <= 0 || h <= 0) return 0;
+  const smaller = Math.min((a.x1 - a.x0) * (a.bottom - a.top), (b.x1 - b.x0) * (b.bottom - b.top));
+  return smaller > 0 ? (w * h) / smaller : 0;
+}
+
+/** Groups images that overlap on the page (fanned cards, a photo inside its frame). */
+function overlapGroups(images) {
+  const parent = images.map((_, i) => i);
+  const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < images.length; i++) {
+    for (let j = i + 1; j < images.length; j++) {
+      if (overlapRatio(images[i], images[j]) >= 0.2) parent[find(j)] = find(i);
+    }
+  }
+  const groups = new Map();
+  images.forEach((image, i) => {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(image);
+  });
+  return [...groups.values()];
+}
+
+/** Paints the rendered members of a group, in page order, on one canvas covering them all. */
+function composite(members, options) {
+  const box = {
+    x0: Math.min(...members.map(m => m.x0)),
+    x1: Math.max(...members.map(m => m.x1)),
+    top: Math.min(...members.map(m => m.top)),
+    bottom: Math.max(...members.map(m => m.bottom))
+  };
+  let scale = Math.max(...members.map(m => m.rendered.canvas.width / (m.x1 - m.x0)));
+  const largest = Math.max(box.x1 - box.x0, box.bottom - box.top) * scale;
+  if (largest > options.maxImageSize) scale *= options.maxImageSize / largest;
+  const canvas = options.createCanvas(
+    Math.max(1, Math.round((box.x1 - box.x0) * scale)),
+    Math.max(1, Math.round((box.bottom - box.top) * scale))
+  );
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+  for (const m of members) {
+    ctx.drawImage(
+      m.rendered.canvas,
+      (m.x0 - box.x0) * scale,
+      (m.top - box.top) * scale,
+      (m.x1 - m.x0) * scale,
+      (m.bottom - m.top) * scale
+    );
+  }
+  return { ...box, canvas, transparent: true, faint: members.every(m => m.rendered.faint) };
+}
+
 async function processImages(page, options, cache) {
   const pageArea = page.width * page.height;
   classifyImages(page);
-  const kept = [];
   let index = 0;
-  let artKept = false;
 
-  // Walk from the top layer down so the first usable "art" image found is the visible one.
+  // 1. Selection. Walk from the top layer down so the first usable "art" image is the visible one.
+  const selected = [];
+  let artKept = false;
   for (const image of [...page.images].reverse()) {
     const area = image.visibleArea;
     if (!(area > 0)) continue; // outside the page
@@ -185,50 +290,90 @@ async function processImages(page, options, cache) {
     const h = Math.min(image.bottom, page.height) - Math.max(image.top, 0);
     if (area < pageArea * 0.002 || Math.min(w, h) < 12) continue; // specks, rules, tiny ornaments
     if (image.role === "art" && artKept) continue;
-    const isBackground = image.role === "background";
-    if (isBackground && !options.includePageBackgrounds) continue;
-
-    const m = image.matrix;
-    const cacheKey = image.objId
-      ? `${image.objId}|${Math.round(image.x1 - image.x0)}x${Math.round(image.bottom - image.top)}|${Math.sign(m[0])}${Math.sign(m[1])}${Math.sign(m[2])}${Math.sign(m[3])}|${image.mask ? image.mask.layers.map(l => l.objId).join(",") : ""}`
-      : null;
-    let saved = cacheKey ? cache.get(cacheKey) : null;
-    if (saved === FLAT) continue;
-    if (!saved) {
-      const source = sourceToCanvas(image.source, options.createCanvas);
-      const canvas = source && placeImage(source, image, options.createCanvas, { maxDimension: options.maxImageSize });
-      if (!canvas) continue;
-      const masked = applyMask(canvas, image, image.mask, options.createCanvas);
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      if (isFlat(data)) {
-        if (cacheKey) cache.set(cacheKey, FLAT);
-        continue;
-      }
-      let transparent = masked || hasTransparency(data);
-      if (options.transparentBackgrounds && !isBackground && !transparent) {
-        if (removeBackground(data, { tolerance: options.backgroundTolerance })) {
-          ctx.putImageData(data, 0, 0);
-          transparent = true;
-        }
-      }
-      saved = await options.saveImage(canvas, { page: page.number, index: index++, transparent });
-      if (!saved?.src) continue;
-      if (cacheKey) cache.set(cacheKey, saved);
+    if (image.role === "background" && !options.includePageBackgrounds) continue;
+    if (image.role === "art") {
+      const rendered = renderImage(image, options, false);
+      if (!rendered || rendered === FLAT) continue;
+      image.rendered = rendered;
+      artKept = true;
     }
-    if (image.role === "art") artKept = true;
+    selected.push(image);
+  }
+  selected.reverse(); // back to painting order
+
+  // The same image painted twice at the same place (a common trick for denser shadows) is one image.
+  const seen = new Set();
+  for (let i = selected.length - 1; i >= 0; i--) {
+    const im = selected[i];
+    const sig = im.objId ? `${im.objId}|${[im.x0, im.top, im.x1, im.bottom].map(Math.round).join(",")}` : null;
+    if (sig && seen.has(sig)) selected.splice(i, 1);
+    else if (sig) seen.add(sig);
+  }
+
+  // 2. Overlapping inline images are composed into a single figure. Images that overlap another one
+  // are rendered first: faded decorations (engravings behind the text) must stay out of the group.
+  const inline = selected.filter(i => i.role === "inline");
+  const candidates = inline.filter(a => inline.some(b => a !== b && overlapRatio(a, b) >= 0.2));
+  for (const image of candidates) {
+    const rendered = renderImage(image, options, false);
+    image.rendered = rendered;
+  }
+  const groupable = candidates.filter(i => i.rendered && i.rendered !== FLAT && !i.rendered.faint);
+  const units = [];
+  for (const image of selected) {
+    if (image.role !== "inline") units.push([image]);
+    else if (!groupable.includes(image) && image.rendered !== FLAT && image.rendered !== null) units.push([image]);
+  }
+  units.push(...overlapGroups(groupable));
+
+  // 3. Save.
+  const kept = [];
+  for (const unit of units) {
+    const isBackground = unit[0].role === "background";
+    let saved;
+    let box;
+    if (unit.length === 1) {
+      const image = unit[0];
+      const key = cacheKeyOf(image);
+      saved = key ? cache.get(key) : null;
+      if (saved === FLAT) continue;
+      if (!saved) {
+        const rendered = image.rendered ?? renderImage(image, options, isBackground);
+        if (!rendered || rendered === FLAT) {
+          if (key && rendered === FLAT) cache.set(key, FLAT);
+          continue;
+        }
+        saved = await options.saveImage(rendered.canvas, { page: page.number, index: index++, transparent: rendered.transparent });
+        if (!saved?.src) continue;
+        saved = { ...saved, faint: rendered.faint };
+        if (key) cache.set(key, saved);
+      }
+      box = image;
+    } else {
+      const members = unit.filter(image => image.rendered && image.rendered !== FLAT);
+      if (!members.length) continue;
+      const result = members.length === 1 ? { ...members[0], ...members[0].rendered } : composite(members, options);
+      saved = await options.saveImage(result.canvas, { page: page.number, index: index++, transparent: result.transparent });
+      if (!saved?.src) continue;
+      saved = { ...saved, faint: !!result.faint };
+      box = result;
+    }
+    const first = unit[0];
     kept.push({
-      x0: Math.max(image.x0, 0),
-      x1: Math.min(image.x1, page.width),
-      top: Math.max(image.top, 0),
-      bottom: Math.min(image.bottom, page.height),
+      x0: Math.max(box.x0, 0),
+      x1: Math.min(box.x1, page.width),
+      top: Math.max(box.top, 0),
+      bottom: Math.min(box.bottom, page.height),
       src: saved.src,
       key: saved.key ?? saved.src,
       background: isBackground,
-      art: image.role === "art"
+      faint: !!saved.faint,
+      art: first.role === "art",
+      order: page.images.indexOf(first)
     });
   }
-  page.images = kept.reverse();
+  kept.sort((a, b) => a.order - b.order);
+  page.images = kept;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -274,10 +419,20 @@ function groupSections(layouts, stats, outline, options) {
       numbers: [layout.number],
       name,
       showTitle: !(opens && name === heading.text),
+      untitled: !bookmark && !opens,
       layouts: [layout]
     });
   }
-  return sections.map(({ layouts: pages, ...section }) => {
+  // An untitled first page (a chapter's opening illustration, or a range starting mid-section)
+  // belongs to the section that follows.
+  if (sections.length > 1 && sections[0].untitled) {
+    const [first, next] = sections;
+    next.layouts.unshift(...first.layouts);
+    next.numbers.unshift(...first.numbers);
+    next.number = first.number;
+    sections.shift();
+  }
+  return sections.map(({ layouts: pages, untitled, ...section }) => {
     if (options.joinContinuations) {
       joinContinuations(pages, stats, { acrossColumns: options.columnMode === "flow" });
     }

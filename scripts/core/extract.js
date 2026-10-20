@@ -59,7 +59,8 @@ function readSpans(pdfjs, page, textContent, viewport) {
   const spans = [];
   for (const item of textContent.items) {
     if (typeof item.str !== "string") continue; // marked-content markers
-    const str = item.str;
+    // U+FFFD marks glyphs pdf.js could not map to a character (missing ToUnicode entries).
+    const str = item.str.replace(/\uFFFD/g, "");
     if (!str.trim()) continue;
     const style = textContent.styles[item.fontName] ?? {};
     if (style.vertical) continue;
@@ -122,14 +123,16 @@ async function readImages(pdfjs, page, opList, viewport, timeout) {
   const { OPS, Util } = pdfjs;
   const identity = [1, 0, 0, 1, 0, 0];
   const stack = [];
-  let state = { ctm: identity, mask: null };
+  // mask: soft mask set in the current graphics state; outer: masks of enclosing groups, which keep
+  // applying to everything inside them even if the group resets its own SMask.
+  let state = { ctm: identity, mask: null, outer: [] };
   const groups = [];
   let pendingMask = null;
   const found = [];
 
   const push = () => stack.push(state);
   const pop = () => {
-    state = stack.pop() ?? { ctm: identity, mask: null };
+    state = stack.pop() ?? { ctm: identity, mask: null, outer: [] };
   };
   const maskGroup = () => {
     for (let i = groups.length - 1; i >= 0; i--) if (groups[i].isMask) return groups[i];
@@ -138,7 +141,7 @@ async function readImages(pdfjs, page, opList, viewport, timeout) {
   const record = entry => {
     const group = maskGroup();
     if (group) group.layers.push(entry);
-    else found.push({ ...entry, mask: state.mask });
+    else found.push({ ...entry, masks: state.mask ? [...state.outer, state.mask] : state.outer });
   };
 
   const { fnArray, argsArray } = opList;
@@ -162,6 +165,7 @@ async function readImages(pdfjs, page, opList, viewport, timeout) {
           layers: []
         });
         push();
+        if (!smask && state.mask) state = { ...state, outer: [...state.outer, state.mask], mask: null };
         break;
       }
       case OPS.endGroup: {
@@ -226,13 +230,15 @@ async function readImages(pdfjs, page, opList, viewport, timeout) {
   for (const entry of found) {
     const image = await resolve(entry);
     if (!image) continue;
-    if (entry.mask) {
-      if (!masks.has(entry.mask)) {
-        const layers = (await Promise.all(entry.mask.layers.map(resolve))).filter(Boolean);
-        masks.set(entry.mask, layers.length ? { subtype: entry.mask.subtype, layers } : null);
+    const resolved = [];
+    for (const mask of entry.masks) {
+      if (!masks.has(mask)) {
+        const layers = (await Promise.all(mask.layers.map(resolve))).filter(Boolean);
+        masks.set(mask, layers.length ? { subtype: mask.subtype, layers } : null);
       }
-      image.mask = masks.get(entry.mask);
+      if (masks.get(mask)) resolved.push(masks.get(mask));
     }
+    if (resolved.length) image.masks = resolved;
     placed.push(image);
   }
   return placed;

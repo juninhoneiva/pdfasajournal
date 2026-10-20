@@ -18,7 +18,7 @@ function* paragraphsOf(node) {
   if (node.type === "leaf") {
     for (const block of node.blocks) if (block.kind === "para") yield block;
   } else {
-    for (const child of node.children) yield* paragraphsOf(child);
+    for (const child of node.children ?? []) yield* paragraphsOf(child);
   }
 }
 
@@ -132,6 +132,14 @@ function alignmentOf(paragraph, container) {
     if (!(left > 1.5 * em && Math.abs(left - rightGap) <= Math.max(3, 0.06 * width))) centered = false;
     if (!(rightGap <= Math.max(2, 0.02 * width) && left > 0.3 * width)) right = false;
   }
+  // Justified text inset on both sides (boxed sidebars) looks centered but is not: its lines share
+  // the same width, while centered text has ragged lines.
+  if (centered && paragraph.lines.length >= 3) {
+    const widths = paragraph.lines.map(l => l.x1 - l.x0);
+    const widest = Math.max(...widths);
+    const full = widths.filter(w => w >= widest * 0.97).length;
+    if (full >= Math.ceil(paragraph.lines.length * 0.6)) centered = false;
+  }
   if (centered) return "center";
   if (right) return "right";
   return null;
@@ -162,7 +170,7 @@ function renderParagraph(paragraph, container, stats, options) {
   return `<p${alignAttrs(align, small)}>${body}</p>`;
 }
 
-function renderFigure(image, container, extraClass = "") {
+function renderFigure(image, container, extraClass = "", float = null) {
   const width = container.x1 - container.x0;
   const imgWidth = image.x1 - image.x0;
   const pct = width > 0 ? Math.min(100, Math.max(5, (imgWidth / width) * 100)) : 100;
@@ -171,6 +179,11 @@ function renderFigure(image, container, extraClass = "") {
   let align = "left";
   if (Math.abs(left - right) <= 0.05 * width) align = "center";
   else if (left > right) align = "right";
+  if (float) {
+    // The figure takes the image's share of the column; the image fills the figure.
+    const classes = ["pdfj-figure", `pdfj-float-${float}`, extraClass].filter(Boolean).join(" ");
+    return `<figure class="${classes}" style="width: ${pct.toFixed(1)}%"><img src="${escapeHtml(image.src)}" alt="" style="width: 100%"></figure>`;
+  }
   const classes = ["pdfj-figure", `pdfj-align-${align}`, extraClass].filter(Boolean).join(" ");
   return `<figure class="${classes}"><img src="${escapeHtml(image.src)}" alt="" style="width: ${pct.toFixed(1)}%"></figure>`;
 }
@@ -187,16 +200,31 @@ function renderLeaf(node, container, stats, options) {
       html += "</ul>";
       inList = false;
     }
-    if (block.kind === "image") html += renderFigure(block.image, container);
+    if (block.kind === "image") html += renderFigure(block.image, container, "", block.float);
+    else if (block.kind === "table") html += renderTable(block, options);
     else html += renderParagraph(block, container, stats, options);
   }
   if (inList) html += "</ul>";
   return html;
 }
 
+function renderTable(node, options) {
+  let html = `<table class="pdfj-table"><tbody>`;
+  for (const row of node.rows) {
+    html += "<tr>";
+    for (let i = 0; i < node.columns; i++) {
+      const cell = row.cells[i];
+      html += `<td>${cell ? runsToHtml(buildRuns({ lines: cell.lines }, options)) : ""}</td>`;
+    }
+    html += "</tr>";
+  }
+  return `${html}</tbody></table>`;
+}
+
 function renderNode(node, container, stats, options) {
   if (!node) return "";
   if (node.type === "leaf") return renderLeaf(node, container, stats, options);
+  if (node.type === "table") return renderTable(node, options);
   if (node.type === "rows") return node.children.map(c => renderNode(c, container, stats, options)).join("");
 
   // Columns
@@ -218,8 +246,14 @@ function renderNode(node, container, stats, options) {
 export function renderPage(layout, stats, options = {}) {
   const container = { x0: layout.bounds.x0, x1: layout.bounds.x1 };
   let html = "";
-  for (const image of layout.underlays) html += renderFigure(image, container, "pdfj-underlay");
+  // Images with text printed over or around them cannot sit inside a column: they go before the
+  // page content when they start in its top half, after it otherwise.
+  const middle = layout.height / 2;
+  const before = layout.underlays.filter(i => (i.top + i.bottom) / 2 < middle);
+  const after = layout.underlays.filter(i => (i.top + i.bottom) / 2 >= middle);
+  for (const image of before) html += renderFigure(image, container, "pdfj-underlay");
   html += renderNode(layout.tree, container, stats, options);
+  for (const image of after) html += renderFigure(image, container, "pdfj-underlay");
   const page = { x0: 0, x1: layout.width };
   for (const image of layout.fullPage ?? []) html += renderFigure(image, page, "pdfj-fullpage");
   return `<div class="pdfj-page" data-pdf-page="${layout.number}">${html}</div>`;

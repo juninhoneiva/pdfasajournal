@@ -122,15 +122,14 @@ test("journal pages follow the book sections", async () => {
   assert.deepEqual(
     result.pages.map(p => [p.name, p.numbers]),
     [
-      ["Pagina 1", [1]],
-      ["NARRANDO", [2, 3, 4]],
+      ["NARRANDO", [1, 2, 3, 4]],
       ["A FUNDACAO PENHEW", [5]]
     ]
   );
-  const narrando = result.pages[1];
+  const narrando = result.pages[0];
   assert.equal(narrando.showTitle, false, "the heading inside the content already names the page");
   assert.match(narrando.html, /<h1>DRAMATIS PERSONAE:<\/h1>/, "mid-page heading kept inside the section");
-  assert.equal((narrando.html.match(/class="pdfj-page"/g) ?? []).length, 3);
+  assert.equal((narrando.html.match(/class="pdfj-page"/g) ?? []).length, 4);
 });
 
 test("one journal page per PDF page when asked", async () => {
@@ -168,4 +167,18 @@ test("a paragraph cut by the page break is joined back", async () => {
 test("joining can be turned off", async () => {
   const { result } = await convert("page-break.pdf", { joinContinuations: false });
   assert.match(result.pages[0].html, /<p>passagens de primeira/);
+});
+
+test("overlapping images become one figure; single-color tints are dropped", async () => {
+  const { result, images } = await convert("overlap.pdf");
+  assert.equal(images.length, 1, "the three fanned copies are saved as one composite");
+  assert.equal((result.pages[0].html.match(/<img/g) ?? []).length, 1);
+  assert.ok(images[0].width > images[0].height, "composite covers the whole fan");
+});
+
+test("text wrapped around a portrait keeps one paragraph and the image floats", async () => {
+  const { result } = await convert("wrap.pdf");
+  const html = result.pages[0].html;
+  assert.equal((html.match(/<p>/g) ?? []).length, 1, "the paragraph is not cut by the image");
+  assert.match(html, /<figure class="pdfj-figure pdfj-float-right"[^>]*><img[^>]*><\/figure><p>/);
 });
