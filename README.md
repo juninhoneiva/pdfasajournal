@@ -53,4 +53,4 @@ python3 tools/make-fixtures.py                        # regenera os PDFs de test
 - `scripts/foundry/`: janela de importação, upload das imagens e criação do journal.
 - `lib/pdfjs/`: pdf.js 5.4.296 (Apache 2.0).
 
-Para publicar uma versão, envie uma tag `vX.Y.Z` (`git tag v0.2.0 && git push origin v0.2.0`); o workflow cria o *release* com `module.json` e `module.zip`, e o manifesto `https://github.com/juninhoneiva/pdfasajournal/releases/latest/download/module.json` passa a servir para instalar pelo Foundry.
+Para publicar uma versão, atualize `version` no `module.json` e rode o workflow **Release** na aba Actions do GitHub (ou envie uma tag `vX.Y.Z`); ele cria o *release* com `module.json` e `module.zip`, e o manifesto `https://github.com/juninhoneiva/pdfasajournal/releases/latest/download/module.json` passa a servir para instalar pelo Foundry.

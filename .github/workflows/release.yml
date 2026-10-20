@@ -1,8 +1,16 @@
 name: Release
 
+# Runs when a version tag (v1.2.3) is pushed, or manually from the Actions tab.
+# Manual runs use the version in module.json unless one is given, and create the tag.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 0.2.0). Empty = version in module.json"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -12,17 +20,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve version
+        id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="$(jq -r .version module.json)"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Stamp version and download URL
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          jq --arg v "$VERSION" \
-             --arg d "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/module.zip" \
+          jq --arg v "${{ steps.v.outputs.version }}" \
+             --arg d "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.v.outputs.tag }}/module.zip" \
              '.version = $v | .download = $d' module.json > module.tmp && mv module.tmp module.json
       - name: Package
         run: zip -r module.zip module.json scripts styles templates lang lib README.md LICENSE
       - uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.v.outputs.tag }}
           make_latest: true
           files: |
             module.json
