@@ -222,17 +222,31 @@ export function renderPage(layout, stats, options = {}) {
   html += renderNode(layout.tree, container, stats, options);
   const page = { x0: 0, x1: layout.width };
   for (const image of layout.fullPage ?? []) html += renderFigure(image, page, "pdfj-fullpage");
-  return `<div class="pdfj-page">${html}</div>`;
+  return `<div class="pdfj-page" data-pdf-page="${layout.number}">${html}</div>`;
 }
 
-/** Text of the first heading of a page (used to name journal pages). */
+/**
+ * First section heading of a page (levels 1-2), with how much body text comes before it.
+ * `charsBefore` tells whether the heading opens the page or sits after text continued from the
+ * previous section.
+ */
 export function firstHeading(layout, stats, maxLevel = 2) {
+  let charsBefore = 0;
   for (const p of paragraphsOf(layout.tree)) {
     const level = headingLevel(p, stats);
     if (level && level <= maxLevel) {
-      const text = buildRuns(p).map(r => r.text).join("").trim();
-      if (text) return text.length > 80 ? `${text.slice(0, 77)}...` : text;
+      const text = buildRuns(p)
+        .map(r => r.text)
+        .join("")
+        .replace(/\s+/g, " ")
+        .replace(/[\s:;,.–—-]+$/u, "")
+        .trim();
+      // Ignore stray letters and numbers (decorations, drop caps, page furniture).
+      if ((text.match(/\p{L}/gu) ?? []).length >= 3) {
+        return { text: text.length > 80 ? `${text.slice(0, 77)}...` : text, level, charsBefore };
+      }
     }
+    charsBefore += p.chars;
   }
   return null;
 }

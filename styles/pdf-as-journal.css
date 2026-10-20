@@ -4,6 +4,10 @@
   --pdfj-gutter: 1.5em;
 }
 
+.pdfj-page + .pdfj-page {
+  margin-top: 1em;
+}
+
 .pdfj-page .pdfj-cols {
   display: grid;
   column-gap: var(--pdfj-gutter);

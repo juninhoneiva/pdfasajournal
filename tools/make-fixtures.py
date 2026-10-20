@@ -110,5 +110,28 @@ def art_page():
     c.setFont("Helvetica", 14); c.drawCentredString(W / 2, H - 733, "176")
     c.showPage(); c.save()
 
-make_images(); two_columns(); three_columns(); art_page()
+def sections():
+    """Five pages: sections crossing page breaks, a heading in the middle of a page, an untitled
+    first page and repeated header/footer."""
+    c = canvas.Canvas(os.path.join(OUT, "sections.pdf"), pagesize=A4)
+    W, H = A4
+    plan = [
+        [("p", words(220, 1))],                                   # 1: untitled (continues a section)
+        [("h1", "NARRANDO"), ("p", words(200, 2))],               # 2: opens "NARRANDO"
+        [("p", words(230, 3))],                                   # 3: continuation
+        [("p", words(180, 4)), ("h1", "DRAMATIS PERSONAE:"), ("p", words(60, 5))],  # 4: heading mid-page
+        [("h1", "A FUNDACAO PENHEW"), ("p", words(150, 6))],      # 5: opens a new section
+    ]
+    for n, blocks in enumerate(plan, start=1):
+        c.setFont("Helvetica", 8); c.drawString(50, H - 30, "Mascaras de Nyarlathotep"); c.drawString(W / 2, 25, str(175 + n))
+        y = H - 80
+        for kind, text in blocks:
+            if kind == "h1":
+                c.setFont("Helvetica-Bold", 20); c.drawString(50, y, text); y -= 34
+            else:
+                y = column(c, 50, y, W - 100, [("p", text)]) - 10
+        c.showPage()
+    c.save()
+
+make_images(); two_columns(); three_columns(); art_page(); sections()
 print("ok")

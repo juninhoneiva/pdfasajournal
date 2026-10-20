@@ -15,6 +15,7 @@ const STORED_OPTIONS = [
   "skipRepeatedImages",
   "removeHeadersFooters",
   "columnMode",
+  "groupBy",
   "joinHyphens",
   "maxImageSize"
 ];
@@ -44,6 +45,10 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       options,
       folders,
+      groupModes: {
+        section: "PDFJ.GroupBy.Section",
+        page: "PDFJ.GroupBy.Page"
+      },
       columnModes: {
         grid: "PDFJ.ColumnMode.Grid",
         flow: "PDFJ.ColumnMode.Flow"

@@ -8,7 +8,11 @@
     "PageLabel": "Página {n}",
     "Done": "Journal \"{name}\" criado com {pages} página(s).",
     "Error": "Falha ao importar o PDF: {message}",
-    "Section": { "Journal": "Journal", "Layout": "Layout", "Images": "Imagens" },
+    "Section": {
+      "Journal": "Journal",
+      "Layout": "Layout",
+      "Images": "Imagens"
+    },
     "Field": {
       "Name": "Nome do journal",
       "Folder": "Pasta",
@@ -25,17 +29,32 @@
       "PageBackgrounds": "Incluir imagens de fundo de página",
       "SkipRepeated": "Ignorar ornamentos repetidos",
       "SkipRepeatedHint": "Imagens que se repetem em muitas páginas (molduras, vinhetas) são omitidas.",
-      "MaxImageSize": "Tamanho máximo da imagem (px)"
+      "MaxImageSize": "Tamanho máximo da imagem (px)",
+      "GroupBy": "Páginas do journal",
+      "GroupByHint": "Por seção: cada título do livro vira uma página do journal e as páginas sem título se juntam à seção anterior. Por página: uma página do journal para cada página do PDF."
     },
-    "ColumnMode": { "Grid": "Fiel ao PDF", "Flow": "Fluida" },
+    "ColumnMode": {
+      "Grid": "Fiel ao PDF",
+      "Flow": "Fluida"
+    },
     "Progress": {
       "Read": "Lendo página {current} de {total}...",
       "Layout": "Montando o layout...",
       "Create": "Criando o journal..."
     },
     "Settings": {
-      "ImageSource": { "Name": "Origem dos arquivos", "Hint": "Origem do FilePicker onde as imagens são gravadas (normalmente \"data\")." },
-      "ImageDirectory": { "Name": "Pasta das imagens", "Hint": "Pasta onde as imagens extraídas são gravadas. Em branco: worlds/<mundo>/pdf-as-journal" }
+      "ImageSource": {
+        "Name": "Origem dos arquivos",
+        "Hint": "Origem do FilePicker onde as imagens são gravadas (normalmente \"data\")."
+      },
+      "ImageDirectory": {
+        "Name": "Pasta das imagens",
+        "Hint": "Pasta onde as imagens extraídas são gravadas. Em branco: worlds/<mundo>/pdf-as-journal"
+      }
+    },
+    "GroupBy": {
+      "Section": "Uma por seção do livro",
+      "Page": "Uma por página do PDF"
     }
   }
 }

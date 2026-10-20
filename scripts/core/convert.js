@@ -22,6 +22,7 @@ export const DEFAULT_OPTIONS = {
   skipRepeatedImages: true,
   removeHeadersFooters: true,
   columnMode: "grid",
+  groupBy: "section",
   joinHyphens: true,
   maxImageSize: 2048,
   pageLabel: "Page {n}",
@@ -228,6 +229,56 @@ async function processImages(page, options, cache) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Journal pages: one per PDF page, or one per book section                   */
+/* -------------------------------------------------------------------------- */
+
+const SECTION_LEAD = 150; // body characters allowed before a heading that still opens the page
+
+function pageEntry(layout, stats, outline, options) {
+  const heading = firstHeading(layout, stats);
+  const name = outline.get(layout.number)?.title || heading?.text || options.pageLabel.replace("{n}", layout.number);
+  return {
+    number: layout.number,
+    numbers: [layout.number],
+    name,
+    // When the name is the page's own first heading, showing the journal page title would repeat it.
+    showTitle: name !== heading?.text,
+    html: renderPage(layout, stats, options)
+  };
+}
+
+/**
+ * A new section starts on a page with a PDF bookmark, or whose first heading opens the page.
+ * Pages without one are appended to the current section, so the journal follows the book's own
+ * titles instead of page numbers. Headings in the middle of a page stay inside it and show up in
+ * the page's table of contents.
+ */
+function groupSections(layouts, stats, outline, options) {
+  const sections = [];
+  for (const layout of layouts) {
+    const heading = firstHeading(layout, stats);
+    const bookmark = outline.get(layout.number)?.title;
+    const opens = heading && heading.charsBefore <= SECTION_LEAD;
+    const current = sections.at(-1);
+    const html = renderPage(layout, stats, options);
+    if (current && !bookmark && !opens) {
+      current.numbers.push(layout.number);
+      current.html += html;
+      continue;
+    }
+    const name = bookmark || (opens ? heading.text : null) || options.pageLabel.replace("{n}", layout.number);
+    sections.push({
+      number: layout.number,
+      numbers: [layout.number],
+      name,
+      showTitle: !(opens && name === heading.text),
+      html
+    });
+  }
+  return sections;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Main entry                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -269,13 +320,9 @@ export async function convertPdf(pdfjs, data, userOptions = {}) {
 
     const layouts = pages.map(layoutPage);
     const stats = computeStats(layouts);
-    const result = layouts.map(layout => {
-      const heading = firstHeading(layout, stats);
-      const name = outline.get(layout.number)?.title || heading || options.pageLabel.replace("{n}", layout.number);
-      // When the name is the page's own first heading, showing the journal page title would repeat it.
-      const showTitle = name !== heading;
-      return { number: layout.number, name, showTitle, html: renderPage(layout, stats, options) };
-    });
+    const result = options.groupBy === "page"
+      ? layouts.map(layout => pageEntry(layout, stats, outline, options))
+      : groupSections(layouts, stats, outline, options);
 
     const title = metadata?.info?.Title?.trim() || null;
     return { title, numPages: doc.numPages, stats, pages: result };

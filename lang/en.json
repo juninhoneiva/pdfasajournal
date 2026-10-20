@@ -8,7 +8,11 @@
     "PageLabel": "Page {n}",
     "Done": "Journal \"{name}\" created with {pages} page(s).",
     "Error": "PDF import failed: {message}",
-    "Section": { "Journal": "Journal", "Layout": "Layout", "Images": "Images" },
+    "Section": {
+      "Journal": "Journal",
+      "Layout": "Layout",
+      "Images": "Images"
+    },
     "Field": {
       "Name": "Journal name",
       "Folder": "Folder",
@@ -25,17 +29,32 @@
       "PageBackgrounds": "Include full-page background images",
       "SkipRepeated": "Skip repeated ornaments",
       "SkipRepeatedHint": "Images repeated on many pages (frames, flourishes) are left out.",
-      "MaxImageSize": "Maximum image size (px)"
+      "MaxImageSize": "Maximum image size (px)",
+      "GroupBy": "Journal pages",
+      "GroupByHint": "By section: each book heading becomes a journal page and untitled pages join the previous section. By page: one journal page per PDF page."
     },
-    "ColumnMode": { "Grid": "Faithful to the PDF", "Flow": "Flowing" },
+    "ColumnMode": {
+      "Grid": "Faithful to the PDF",
+      "Flow": "Flowing"
+    },
     "Progress": {
       "Read": "Reading page {current} of {total}...",
       "Layout": "Building the layout...",
       "Create": "Creating the journal..."
     },
     "Settings": {
-      "ImageSource": { "Name": "File source", "Hint": "FilePicker source where images are stored (usually \"data\")." },
-      "ImageDirectory": { "Name": "Image folder", "Hint": "Folder for extracted images. Empty: worlds/<world>/pdf-as-journal" }
+      "ImageSource": {
+        "Name": "File source",
+        "Hint": "FilePicker source where images are stored (usually \"data\")."
+      },
+      "ImageDirectory": {
+        "Name": "Image folder",
+        "Hint": "Folder for extracted images. Empty: worlds/<world>/pdf-as-journal"
+      }
+    },
+    "GroupBy": {
+      "Section": "One per book section",
+      "Page": "One per PDF page"
     }
   }
 }

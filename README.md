@@ -4,13 +4,13 @@ Módulo para Foundry VTT (v12 e v13; alvo principal: 13.351) que importa um PDF 
 
 ## O que ele faz
 
-Cada página do PDF vira uma página do journal. O módulo lê o texto com a posição de cada trecho e reconstrói a estrutura:
+O journal segue as seções do livro: cada título vira uma página do journal, com o nome da seção, e as páginas do PDF sem título próprio se juntam à seção anterior. Se preferir, a janela de importação permite criar uma página do journal por página do PDF. O módulo lê o texto com a posição de cada trecho e reconstrói a estrutura:
 
 - **Colunas**: detectadas pelos espaços em branco entre os blocos de texto (corte XY recursivo). Viram uma grade CSS com as mesmas proporções do PDF (modo *Fiel*) ou colunas fluidas (modo *Fluida*). Funciona com 1, 2, 3 ou mais colunas e com títulos ocupando a largura toda acima delas.
 - **Títulos**: inferidos pelo tamanho da fonte em relação ao texto do corpo do documento inteiro (h1 a h4).
 - **Formatação**: negrito, itálico, sobrescrito, listas com marcadores, capitulares, alinhamento centralizado/à direita e texto menor (legendas, notas).
 - **Cabeçalhos e rodapés** repetidos e números de página são removidos.
-- **Nomes das páginas**: vêm dos marcadores (sumário) do PDF; na falta deles, do primeiro título da página.
+- **Nomes das páginas**: vêm dos marcadores (sumário) do PDF; na falta deles, do título que abre a seção. Títulos no meio de uma página ficam dentro da seção e aparecem no sumário da página no Foundry.
 - **Imagens**: extraídas na resolução original, já com rotação e espelhamento aplicados, gravadas em WebP na pasta do mundo.
   - Se a imagem já tem transparência no PDF (canal alfa / SMask), ela é preservada.
   - Se não tem, o fundo liso que toca as bordas é removido (com suavização das bordas). Fotos e ilustrações com moldura são detectadas e ficam como estão.

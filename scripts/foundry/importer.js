@@ -47,7 +47,7 @@ export async function importPdf({ data, fileName = "document.pdf", name, folder,
     sort: (i + 1) * 100000,
     title: { show: page.showTitle, level: 1 },
     text: { content: page.html, format: TEXT_FORMAT_HTML },
-    flags: { [MODULE_ID]: { pdfPage: page.number } }
+    flags: { [MODULE_ID]: { pdfPages: page.numbers } }
   }));
 
   const entry = await JournalEntry.implementation.create({

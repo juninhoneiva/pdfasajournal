@@ -21,6 +21,13 @@
       </select>
     </div>
     <div class="form-group">
+      <label>{{localize "PDFJ.Field.GroupBy"}}</label>
+      <select name="groupBy">
+        {{selectOptions groupModes selected=options.groupBy localize=true}}
+      </select>
+      <p class="hint">{{localize "PDFJ.Field.GroupByHint"}}</p>
+    </div>
+    <div class="form-group">
       <label>{{localize "PDFJ.Field.Pages"}}</label>
       <input type="text" name="pages" value="{{options.pages}}" placeholder="1-10, 15">
       <p class="hint">{{localize "PDFJ.Field.PagesHint"}}</p>

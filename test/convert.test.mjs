@@ -41,7 +41,7 @@ test("two-column pages keep two columns and reading order", async () => {
   assert.equal(result.pages.length, 3);
   const page = result.pages[0];
   assert.equal(page.name, "Capitulo 1: A Jornada");
-  assert.match(page.html, /^<div class="pdfj-page"><h1>Capitulo 1: A Jornada<\/h1><div class="pdfj-cols pdfj-cols-2"/);
+  assert.match(page.html, /^<div class="pdfj-page" data-pdf-page="1"><h1>Capitulo 1: A Jornada<\/h1><div class="pdfj-cols pdfj-cols-2"/);
   assert.equal((page.html.match(/class="pdfj-col"/g) ?? []).length, 2);
   assert.match(page.html, /<h2>Secao de Regras<\/h2>/);
   // Left column starts with "Lorem", right column ends with the reversed first paragraph.
@@ -115,4 +115,26 @@ test("full-page illustration is kept; spread background, flat mask, side tab and
   assert.doesNotMatch(html, />S<|SERPENT|S E R/);
   assert.doesNotMatch(html, /176/);
   assert.ok(html.indexOf("INTRODUCAO") < html.indexOf("<img"), "title before the artwork");
+});
+
+test("journal pages follow the book sections", async () => {
+  const { result } = await convert("sections.pdf", { pageLabel: "Pagina {n}" });
+  assert.deepEqual(
+    result.pages.map(p => [p.name, p.numbers]),
+    [
+      ["Pagina 1", [1]],
+      ["NARRANDO", [2, 3, 4]],
+      ["A FUNDACAO PENHEW", [5]]
+    ]
+  );
+  const narrando = result.pages[1];
+  assert.equal(narrando.showTitle, false, "the heading inside the content already names the page");
+  assert.match(narrando.html, /<h1>DRAMATIS PERSONAE:<\/h1>/, "mid-page heading kept inside the section");
+  assert.equal((narrando.html.match(/class="pdfj-page"/g) ?? []).length, 3);
+});
+
+test("one journal page per PDF page when asked", async () => {
+  const { result } = await convert("sections.pdf", { groupBy: "page" });
+  assert.equal(result.pages.length, 5);
+  assert.equal(result.pages[3].name, "DRAMATIS PERSONAE");
 });
