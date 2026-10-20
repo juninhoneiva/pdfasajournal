@@ -2,7 +2,7 @@
   "id": "pdf-as-journal",
   "title": "PDF as Journal",
   "description": "Import a PDF as a Journal Entry keeping its layout: columns, headings, formatting and images (with transparent backgrounds when possible).",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "authors": [{ "name": "Ailton Neiva" }],
   "compatibility": { "minimum": "12", "verified": "13.351" },
   "esmodules": ["scripts/main.js"],

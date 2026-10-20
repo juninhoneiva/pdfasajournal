@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./constants.js";
 import { PdfImportApp } from "./foundry/import-app.js";
 import { importPdf } from "./foundry/importer.js";
+import { relinkBook } from "./foundry/links.js";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "imageSource", {
@@ -29,6 +30,8 @@ Hooks.once("init", () => {
   const module = game.modules.get(MODULE_ID);
   module.api = {
     importPdf,
+    /** Re-creates the "p. N" links of every imported journal (or of one book, by file name). */
+    relink: relinkBook,
     /** Opens the import dialog. */
     open: () => new PdfImportApp().render(true)
   };

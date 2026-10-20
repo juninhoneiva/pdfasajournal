@@ -56,6 +56,15 @@
       <input type="checkbox" name="joinContinuations" {{checked options.joinContinuations}}>
       <p class="hint">{{localize "PDFJ.Field.JoinContinuationsHint"}}</p>
     </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.PageBreaks"}}</label>
+      <input type="checkbox" name="pageBreaks" {{checked options.pageBreaks}}>
+    </div>
+    <div class="form-group">
+      <label>{{localize "PDFJ.Field.LinkReferences"}}</label>
+      <input type="checkbox" name="linkReferences" {{checked options.linkReferences}}>
+      <p class="hint">{{localize "PDFJ.Field.LinkReferencesHint"}}</p>
+    </div>
   </fieldset>
 
   <fieldset>

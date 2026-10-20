@@ -33,7 +33,10 @@
       "GroupBy": "Journal pages",
       "GroupByHint": "By section: each book heading becomes a journal page and untitled pages join the previous section. By page: one journal page per PDF page.",
       "JoinContinuations": "Join text split across pages",
-      "JoinContinuationsHint": "A paragraph the book split at a page break (end of the last column, start of the next page's first column) is joined back. In flowing column mode, this also applies between columns."
+      "JoinContinuationsHint": "A paragraph the book split at a page break (end of the last column, start of the next page's first column) is joined back. In flowing column mode, this also applies between columns.",
+      "PageBreaks": "Rule between book pages",
+      "LinkReferences": "Link page references (p. 123)",
+      "LinkReferencesHint": "References to book pages become links to the matching part of the journal. Works across chapters imported separately, as long as they come from the same PDF file."
     },
     "ColumnMode": {
       "Grid": "Faithful to the PDF",
@@ -42,7 +45,8 @@
     "Progress": {
       "Read": "Reading page {current} of {total}...",
       "Layout": "Building the layout...",
-      "Create": "Creating the journal..."
+      "Create": "Creating the journal...",
+      "Links": "Linking page references..."
     },
     "Settings": {
       "ImageSource": {

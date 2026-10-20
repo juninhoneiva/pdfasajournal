@@ -8,6 +8,14 @@
   margin-top: 1em;
 }
 
+hr.pdfj-page-break {
+  border: none;
+  border-top: 1px dashed currentColor;
+  opacity: 0.4;
+  margin: 1.2em 15%;
+  clear: both;
+}
+
 .pdfj-page .pdfj-cols {
   display: grid;
   column-gap: var(--pdfj-gutter);

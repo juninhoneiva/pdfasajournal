@@ -41,7 +41,7 @@ test("two-column pages keep two columns and reading order", async () => {
   assert.equal(result.pages.length, 3);
   const page = result.pages[0];
   assert.equal(page.name, "Capitulo 1: A Jornada");
-  assert.match(page.html, /^<div class="pdfj-page" data-pdf-page="1"><h1>Capitulo 1: A Jornada<\/h1><div class="pdfj-cols pdfj-cols-2"/);
+  assert.match(page.html, /^<div class="pdfj-page" data-pdf-page="1" data-book-page="\d+"><h1>Capitulo 1: A Jornada<\/h1><div class="pdfj-cols pdfj-cols-2"/);
   assert.equal((page.html.match(/class="pdfj-col"/g) ?? []).length, 2);
   assert.match(page.html, /<h2>Secao de Regras<\/h2>/);
   // Left column starts with "Lorem", right column ends with the reversed first paragraph.
@@ -113,7 +113,7 @@ test("full-page illustration is kept; spread background, flat mask, side tab and
   assert.match(html, /pdfj-fullpage/);
   assert.match(html, /INTRODUCAO/);
   assert.doesNotMatch(html, />S<|SERPENT|S E R/);
-  assert.doesNotMatch(html, /176/);
+  assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /176/);
   assert.ok(html.indexOf("INTRODUCAO") < html.indexOf("<img"), "title before the artwork");
 });
 
@@ -181,4 +181,27 @@ test("text wrapped around a portrait keeps one paragraph and the image floats", 
   const html = result.pages[0].html;
   assert.equal((html.match(/<p>/g) ?? []).length, 1, "the paragraph is not cut by the image");
   assert.match(html, /<figure class="pdfj-figure pdfj-float-right"[^>]*><img[^>]*><\/figure><p>/);
+});
+
+test("book references become content links", async () => {
+  const { linkReferences, normalizeName } = await import("../scripts/core/links.js");
+  const html =
+    "<p>Ver <strong>Matança no Soho</strong> (p. 250) e (<strong>Prospero House</strong>, p. 128, América)." +
+    " Também p. 999 e @UUID[JournalEntry.a.JournalEntryPage.b]{p. 250}.</p>";
+  const seen = [];
+  const { html: out, count } = linkReferences(html, (n, name) => {
+    seen.push([n, name]);
+    return n === 999 ? null : { uuid: `JournalEntry.j.JournalEntryPage.p${n}`, anchor: name ? normalizeName(name).replace(/ /g, "-") : null };
+  });
+  assert.equal(count, 2);
+  assert.match(out, /<strong>Matança no Soho<\/strong> \(@UUID\[JournalEntry\.j\.JournalEntryPage\.p250#matanca-no-soho\]\{p\. 250\}\)/);
+  assert.match(out, /<strong>Prospero House<\/strong>, @UUID\[JournalEntry\.j\.JournalEntryPage\.p128#prospero-house\]\{p\. 128\}, América/);
+  assert.match(out, / p\. 999 /, "unknown pages stay as text");
+  assert.match(out, /@UUID\[JournalEntry\.a\.JournalEntryPage\.b\]\{p\. 250\}/, "existing links untouched");
+  assert.deepEqual(seen.map(s => s[0]), [250, 128, 999]);
+});
+
+test("printed page numbers are detected from the footer", async () => {
+  const { result } = await convert("sections.pdf", { groupBy: "page" });
+  assert.deepEqual(result.pages.map(p => p.printedPages[0]), [176, 177, 178, 179, 180]);
 });

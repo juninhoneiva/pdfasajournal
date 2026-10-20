@@ -11,6 +11,8 @@ O journal segue as seções do livro: cada título vira uma página do journal, 
 - **Formatação**: negrito, itálico, sobrescrito, listas com marcadores, capitulares, alinhamento centralizado/à direita e texto menor (legendas, notas).
 - **Tabelas**: fichas de estatísticas (FOR, CON, TAM...), linhas de combate e outras tabelas viram `<table>` com as células alinhadas como no livro.
 - **Texto contínuo**: parágrafos que o livro quebrou na virada de página são emendados; imagens com texto em volta (retratos) flutuam ao lado do parágrafo, sem cortá-lo.
+- **Páginas do livro**: um traço separa cada página impressa dentro de uma seção. O módulo identifica a numeração impressa (rodapé), que pode diferir da numeração do arquivo.
+- **Links das referências**: "**Matança no Soho** (p. 250)" vira um link para a página do journal que contém a p. 250 do livro, apontando para o título citado quando ele existe. Os links valem entre capítulos importados em momentos diferentes, desde que venham do mesmo arquivo PDF; a cada importação, todos os journals daquele livro são religados. Por macro: `game.modules.get("pdf-as-journal").api.relink()`.
 - **Decoração**: abas laterais em fonte de símbolos, molduras de quadros, gravuras apagadas atrás do texto e fundos de página são deixados de fora.
 - **Cabeçalhos e rodapés** repetidos e números de página são removidos.
 - **Nomes das páginas**: vêm dos marcadores (sumário) do PDF; na falta deles, do título que abre a seção. Títulos no meio de uma página ficam dentro da seção e aparecem no sumário da página no Foundry.

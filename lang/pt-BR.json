@@ -33,7 +33,10 @@
       "GroupBy": "Páginas do journal",
       "GroupByHint": "Por seção: cada título do livro vira uma página do journal e as páginas sem título se juntam à seção anterior. Por página: uma página do journal para cada página do PDF.",
       "JoinContinuations": "Emendar texto quebrado entre páginas",
-      "JoinContinuationsHint": "Um parágrafo que o livro dividiu na virada de página (fim da última coluna e início da primeira coluna da página seguinte) volta a ser um só. No modo de colunas fluido, vale também entre colunas."
+      "JoinContinuationsHint": "Um parágrafo que o livro dividiu na virada de página (fim da última coluna e início da primeira coluna da página seguinte) volta a ser um só. No modo de colunas fluido, vale também entre colunas.",
+      "PageBreaks": "Traço entre as páginas do livro",
+      "LinkReferences": "Criar links das referências (p. 123)",
+      "LinkReferencesHint": "As referências a páginas do livro viram links para o trecho correspondente do journal. Funciona entre capítulos importados separadamente, desde que venham do mesmo arquivo PDF."
     },
     "ColumnMode": {
       "Grid": "Fiel ao PDF",
@@ -42,7 +45,8 @@
     "Progress": {
       "Read": "Lendo página {current} de {total}...",
       "Layout": "Montando o layout...",
-      "Create": "Criando o journal..."
+      "Create": "Criando o journal...",
+      "Links": "Criando os links das referências..."
     },
     "Settings": {
       "ImageSource": {

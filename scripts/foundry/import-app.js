@@ -18,6 +18,8 @@ const STORED_OPTIONS = [
   "groupBy",
   "joinHyphens",
   "joinContinuations",
+  "pageBreaks",
+  "linkReferences",
   "maxImageSize"
 ];
 
@@ -110,7 +112,7 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const data = formData.object;
     const options = {};
     for (const key of STORED_OPTIONS) if (key in data) options[key] = data[key];
-    for (const key of ["images", "transparentBackgrounds", "includePageBackgrounds", "skipRepeatedImages", "removeHeadersFooters", "joinHyphens", "joinContinuations"]) {
+    for (const key of ["images", "transparentBackgrounds", "includePageBackgrounds", "skipRepeatedImages", "removeHeadersFooters", "joinHyphens", "joinContinuations", "pageBreaks", "linkReferences"]) {
       options[key] = !!data[key];
     }
     options.backgroundTolerance = Number(options.backgroundTolerance) || DEFAULT_OPTIONS.backgroundTolerance;
@@ -122,7 +124,8 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const stageLabel = {
       read: "PDFJ.Progress.Read",
       layout: "PDFJ.Progress.Layout",
-      create: "PDFJ.Progress.Create"
+      create: "PDFJ.Progress.Create",
+      links: "PDFJ.Progress.Links"
     };
     try {
       const entry = await importPdf({

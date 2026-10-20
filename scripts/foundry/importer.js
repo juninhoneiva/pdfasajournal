@@ -5,6 +5,7 @@ import { convertPdf, DEFAULT_OPTIONS } from "../core/convert.js";
 import { slugify } from "../core/util.js";
 import { createCanvas, makeUploader } from "./images.js";
 import { documentParams, loadPdfjs } from "./pdf-loader.js";
+import { relinkBook } from "./links.js";
 
 const TEXT_FORMAT_HTML = 1;
 
@@ -47,15 +48,19 @@ export async function importPdf({ data, fileName = "document.pdf", name, folder,
     sort: (i + 1) * 100000,
     title: { show: page.showTitle, level: 1 },
     text: { content: page.html, format: TEXT_FORMAT_HTML },
-    flags: { [MODULE_ID]: { pdfPages: page.numbers } }
+    flags: { [MODULE_ID]: { pdfPages: page.numbers, printedPages: page.printedPages } }
   }));
 
   const entry = await JournalEntry.implementation.create({
     name: name || result.title || baseName,
     folder: folder || null,
     pages,
-    flags: { [MODULE_ID]: { source: fileName, imageDirectory: directory, importedAt: Date.now(), options } }
+    flags: { [MODULE_ID]: { source: fileName, book: baseName, imageDirectory: directory, importedAt: Date.now(), options } }
   });
+  if (options.linkReferences !== false) {
+    onProgress?.({ stage: "links", current: 0, total: 1 });
+    await relinkBook(baseName);
+  }
   onProgress?.({ stage: "create", current: 1, total: 1 });
   return entry;
 }

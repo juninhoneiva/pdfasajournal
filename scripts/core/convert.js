@@ -26,6 +26,8 @@ export const DEFAULT_OPTIONS = {
   groupBy: "section",
   joinHyphens: true,
   joinContinuations: true,
+  pageBreaks: true,
+  linkReferences: true,
   maxImageSize: 2048,
   pageLabel: "Page {n}",
   documentParams: {}
@@ -69,6 +71,33 @@ function markRunningText(pages) {
   if (pages.length < 3) return;
   const threshold = Math.max(2, Math.ceil(pages.length * 0.25));
   for (const [span, key] of candidates) if (counts.get(key) >= threshold) span.drop = true;
+}
+
+/**
+ * Printed page numbers ("176" in the footer) usually differ from the PDF page index (covers and
+ * front matter count). The offset seen on most pages is applied to every page, which also numbers
+ * pages that print none (full-page art).
+ */
+function detectPrintedNumbers(pages) {
+  const offsets = new Map();
+  for (const page of pages) {
+    const seen = new Set();
+    for (const span of page.spans) {
+      const center = (span.top + span.bottom) / 2;
+      if (center >= page.height * BAND && center <= page.height * (1 - BAND)) continue;
+      const text = span.str.trim();
+      if (!/^\d{1,4}$/.test(text)) continue;
+      const offset = Number(text) - page.number;
+      if (seen.has(offset)) continue;
+      seen.add(offset);
+      offsets.set(offset, (offsets.get(offset) ?? 0) + 1);
+    }
+  }
+  let offset = 0;
+  let best = 0;
+  for (const [value, count] of offsets) if (count > best) [offset, best] = [value, count];
+  if (best < Math.min(2, pages.length)) offset = 0;
+  for (const page of pages) page.printed = page.number + offset;
 }
 
 function markRepeatedImages(pages) {
@@ -388,6 +417,7 @@ function pageEntry(layout, stats, outline, options) {
   return {
     number: layout.number,
     numbers: [layout.number],
+    printedPages: [layout.printed],
     name,
     // When the name is the page's own first heading, showing the journal page title would repeat it.
     showTitle: name !== heading?.text,
@@ -410,6 +440,7 @@ function groupSections(layouts, stats, outline, options) {
     const current = sections.at(-1);
     if (current && !bookmark && !opens) {
       current.numbers.push(layout.number);
+      current.printedPages.push(layout.printed);
       current.layouts.push(layout);
       continue;
     }
@@ -417,6 +448,7 @@ function groupSections(layouts, stats, outline, options) {
     sections.push({
       number: layout.number,
       numbers: [layout.number],
+      printedPages: [layout.printed],
       name,
       showTitle: !(opens && name === heading.text),
       untitled: !bookmark && !opens,
@@ -429,6 +461,7 @@ function groupSections(layouts, stats, outline, options) {
     const [first, next] = sections;
     next.layouts.unshift(...first.layouts);
     next.numbers.unshift(...first.numbers);
+    next.printedPages.unshift(...first.printedPages);
     next.number = first.number;
     sections.shift();
   }
@@ -436,7 +469,9 @@ function groupSections(layouts, stats, outline, options) {
     if (options.joinContinuations) {
       joinContinuations(pages, stats, { acrossColumns: options.columnMode === "flow" });
     }
-    return { ...section, html: pages.map(layout => renderPage(layout, stats, options)).join("") };
+    // A rule marks where a printed page ends, so a column cut mid-sentence reads as a page turn.
+    const separator = options.pageBreaks ? '<hr class="pdfj-page-break">' : "";
+    return { ...section, html: pages.map(layout => renderPage(layout, stats, options)).join(separator) };
   });
 }
 
@@ -477,10 +512,11 @@ export async function convertPdf(pdfjs, data, userOptions = {}) {
     }
 
     progress({ stage: "layout", current: 0, total: pages.length });
+    detectPrintedNumbers(pages);
     if (options.removeHeadersFooters) markRunningText(pages);
     if (options.skipRepeatedImages) markRepeatedImages(pages);
 
-    const layouts = pages.map(layoutPage);
+    const layouts = pages.map(page => Object.assign(layoutPage(page), { printed: page.printed }));
     const stats = computeStats(layouts);
     const result = options.groupBy === "page"
       ? layouts.map(layout => pageEntry(layout, stats, outline, options))

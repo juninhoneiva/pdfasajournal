@@ -256,7 +256,7 @@ export function renderPage(layout, stats, options = {}) {
   for (const image of after) html += renderFigure(image, container, "pdfj-underlay");
   const page = { x0: 0, x1: layout.width };
   for (const image of layout.fullPage ?? []) html += renderFigure(image, page, "pdfj-fullpage");
-  return `<div class="pdfj-page" data-pdf-page="${layout.number}">${html}</div>`;
+  return `<div class="pdfj-page" data-pdf-page="${layout.number}" data-book-page="${layout.printed ?? layout.number}">${html}</div>`;
 }
 
 /**
