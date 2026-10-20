@@ -10,7 +10,7 @@
 import { extractPage } from "./extract.js";
 import { layoutPage } from "./layout.js";
 import { computeStats, firstHeading, renderPage } from "./html.js";
-import { hasTransparency, placeImage, removeBackground, sourceToCanvas } from "./raster.js";
+import { applyMask, hasTransparency, placeImage, removeBackground, sourceToCanvas } from "./raster.js";
 import { parsePageRange } from "./util.js";
 
 export const DEFAULT_OPTIONS = {
@@ -188,7 +188,7 @@ async function processImages(page, options, cache) {
 
     const m = image.matrix;
     const cacheKey = image.objId
-      ? `${image.objId}|${Math.round(image.x1 - image.x0)}x${Math.round(image.bottom - image.top)}|${Math.sign(m[0])}${Math.sign(m[1])}${Math.sign(m[2])}${Math.sign(m[3])}`
+      ? `${image.objId}|${Math.round(image.x1 - image.x0)}x${Math.round(image.bottom - image.top)}|${Math.sign(m[0])}${Math.sign(m[1])}${Math.sign(m[2])}${Math.sign(m[3])}|${image.mask ? image.mask.layers.map(l => l.objId).join(",") : ""}`
       : null;
     let saved = cacheKey ? cache.get(cacheKey) : null;
     if (saved === FLAT) continue;
@@ -196,13 +196,14 @@ async function processImages(page, options, cache) {
       const source = sourceToCanvas(image.source, options.createCanvas);
       const canvas = source && placeImage(source, image, options.createCanvas, { maxDimension: options.maxImageSize });
       if (!canvas) continue;
+      const masked = applyMask(canvas, image, image.mask, options.createCanvas);
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
       if (isFlat(data)) {
         if (cacheKey) cache.set(cacheKey, FLAT);
         continue;
       }
-      let transparent = hasTransparency(data);
+      let transparent = masked || hasTransparency(data);
       if (options.transparentBackgrounds && !isBackground && !transparent) {
         if (removeBackground(data, { tolerance: options.backgroundTolerance })) {
           ctx.putImageData(data, 0, 0);

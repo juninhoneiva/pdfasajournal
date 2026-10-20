@@ -79,9 +79,17 @@ export function placeImage(sourceCanvas, placed, createCanvas, { maxDimension = 
   const outW = Math.max(1, Math.round(boxW * scale));
   const outH = Math.max(1, Math.round(boxH * scale));
 
-  const [a, b, c, d, e, f] = placed.matrix;
   const out = createCanvas(outW, outH);
   const ctx = context2d(out);
+  drawPlaced(ctx, sourceCanvas, placed.matrix, placed, scale);
+  return out;
+}
+
+/** Draws an image with its page matrix into a canvas whose origin is `origin` (page units * scale). */
+function drawPlaced(ctx, sourceCanvas, matrix, origin, scale) {
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+  const [a, b, c, d, e, f] = matrix;
   ctx.imageSmoothingEnabled = true;
   if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
   ctx.setTransform(
@@ -89,12 +97,43 @@ export function placeImage(sourceCanvas, placed, createCanvas, { maxDimension = 
     (scale * b) / w,
     (-scale * c) / h,
     (-scale * d) / h,
-    scale * (c + e - placed.x0),
-    scale * (d + f - placed.top)
+    scale * (c + e - origin.x0),
+    scale * (d + f - origin.top)
   );
   ctx.drawImage(sourceCanvas, 0, 0);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  return out;
+}
+
+/**
+ * Applies a PDF soft mask made of images to an already placed image. Luminosity masks use the
+ * brightness of the mask (white = opaque), Alpha masks its alpha channel. Areas the mask does not
+ * cover take the default black backdrop, i.e. become transparent.
+ */
+export function applyMask(out, placed, mask, createCanvas) {
+  if (!mask?.layers?.length) return false;
+  const scale = out.width / (placed.x1 - placed.x0);
+  const maskCanvas = createCanvas(out.width, out.height);
+  const mctx = context2d(maskCanvas);
+  let drawn = 0;
+  for (const layer of mask.layers) {
+    const source = sourceToCanvas(layer.source, createCanvas);
+    if (!source) continue;
+    drawPlaced(mctx, source, layer.matrix, placed, scale);
+    drawn++;
+  }
+  if (!drawn) return false;
+  const m = mctx.getImageData(0, 0, out.width, out.height).data;
+  const ctx = context2d(out);
+  const image = ctx.getImageData(0, 0, out.width, out.height);
+  const d = image.data;
+  const luminosity = mask.subtype !== "Alpha";
+  for (let k = 0; k < d.length; k += 4) {
+    const coverage = m[k + 3] / 255;
+    const value = luminosity ? ((0.299 * m[k] + 0.587 * m[k + 1] + 0.114 * m[k + 2]) / 255) * coverage : coverage;
+    d[k + 3] = Math.round(d[k + 3] * value);
+  }
+  ctx.putImageData(image, 0, 0);
+  return true;
 }
 
 /** True when a noticeable share of pixels is already (semi)transparent. */

@@ -138,3 +138,20 @@ test("one journal page per PDF page when asked", async () => {
   assert.equal(result.pages.length, 5);
   assert.equal(result.pages[3].name, "DRAMATIS PERSONAE");
 });
+
+test("soft masks: the mask image is not extracted, it becomes the alpha of the masked image", async () => {
+  const alphas = [];
+  const { result, images } = await convert("soft-mask.pdf", {
+    saveImage: async canvas => {
+      const d = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+      const at = (x, y) => d[(Math.floor(y * canvas.height) * canvas.width + Math.floor(x * canvas.width)) * 4 + 3];
+      alphas.push({ corner: at(0.02, 0.02), center: at(0.5, 0.5) });
+      return { src: `img/${alphas.length}.webp`, key: `m${alphas.length}` };
+    }
+  });
+  assert.equal(images.length, 0);
+  assert.equal(alphas.length, 1, "only the masked image is saved, not the mask");
+  assert.equal(alphas[0].corner, 0, "outside the mask is transparent");
+  assert.equal(alphas[0].center, 255, "inside the mask is opaque");
+  assert.equal((result.pages[0].html.match(/<img/g) ?? []).length, 1);
+});

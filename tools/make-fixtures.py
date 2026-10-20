@@ -133,5 +133,43 @@ def sections():
         c.showPage()
     c.save()
 
-make_images(); two_columns(); three_columns(); art_page(); sections()
+def soft_mask():
+    """Hand-written PDF: an image drawn through a Luminosity soft mask whose content is another
+    image (white center, black border), like the rounded shadows and torn edges of the book."""
+    import zlib
+    w, h = 40, 30
+    content = bytes([200, 30, 30] * (w * h))
+    mask = bytearray()
+    for y in range(h):
+        for x in range(w):
+            mask.append(255 if 6 <= x < w - 6 and 6 <= y < h - 6 else 0)
+    def stream(dict_body, data):
+        data = zlib.compress(bytes(data))
+        return f"<< {dict_body} /Filter /FlateDecode /Length {len(data)} >>\nstream\n".encode() + data + b"\nendstream"
+    page_ops = b"q /GS1 gs 200 0 0 150 50 500 cm /Im1 Do Q BT /F1 12 Tf 50 450 Td (Mask test) Tj ET"
+    mask_ops = b"q 200 0 0 150 50 500 cm /Im2 Do Q"
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << "
+        b"/XObject << /Im1 5 0 R >> /ExtGState << /GS1 << /SMask << /Type /Mask /S /Luminosity /G 6 0 R >> >> >> "
+        b"/Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>",
+        stream("", page_ops),
+        stream(f"/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceRGB /BitsPerComponent 8", content),
+        stream("/Type /XObject /Subtype /Form /BBox [0 0 595 842] /Group << /S /Transparency /CS /DeviceGray >> /Resources << /XObject << /Im2 7 0 R >> >>", mask_ops),
+        stream(f"/Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray /BitsPerComponent 8", mask),
+    ]
+    out = bytearray(b"%PDF-1.7\n")
+    offsets = []
+    for i, body in enumerate(objs, start=1):
+        offsets.append(len(out))
+        out += f"{i} 0 obj\n".encode() + body + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(objs) + 1}\n0000000000 65535 f \n".encode()
+    for off in offsets:
+        out += f"{off:010d} 00000 n \n".encode()
+    out += f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
+    open(os.path.join(OUT, "soft-mask.pdf"), "wb").write(out)
+
+make_images(); two_columns(); three_columns(); art_page(); sections(); soft_mask()
 print("ok")

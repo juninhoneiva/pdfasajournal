@@ -108,13 +108,38 @@ function getObject(page, id, timeout) {
   });
 }
 
-/** Walks the operator list keeping track of the current transformation matrix (CTM). */
+/**
+ * Walks the operator list keeping track of the graphics state: the current transformation matrix
+ * (CTM) and the active soft mask.
+ *
+ * Soft masks (ExtGState /SMask) are drawn by pdf.js as a group flagged `smask`: whatever is painted
+ * inside it is the mask itself (white = opaque, black = transparent for Luminosity masks), never
+ * visible content. Images inside such groups are collected as mask layers; when the mask is active
+ * while a later image is painted, the layers are attached to that image so raster.js can turn them
+ * into transparency (rounded corners, torn paper edges, vignettes).
+ */
 async function readImages(pdfjs, page, opList, viewport, timeout) {
   const { OPS, Util } = pdfjs;
   const identity = [1, 0, 0, 1, 0, 0];
   const stack = [];
-  let ctm = identity;
+  let state = { ctm: identity, mask: null };
+  const groups = [];
+  let pendingMask = null;
   const found = [];
+
+  const push = () => stack.push(state);
+  const pop = () => {
+    state = stack.pop() ?? { ctm: identity, mask: null };
+  };
+  const maskGroup = () => {
+    for (let i = groups.length - 1; i >= 0; i--) if (groups[i].isMask) return groups[i];
+    return null;
+  };
+  const record = entry => {
+    const group = maskGroup();
+    if (group) group.layers.push(entry);
+    else found.push({ ...entry, mask: state.mask });
+  };
 
   const { fnArray, argsArray } = opList;
   for (let i = 0; i < fnArray.length; i++) {
@@ -122,55 +147,93 @@ async function readImages(pdfjs, page, opList, viewport, timeout) {
     const args = argsArray[i];
     switch (fn) {
       case OPS.save:
-      case OPS.beginGroup:
-        stack.push(ctm);
+        push();
         break;
       case OPS.restore:
-      case OPS.endGroup:
       case OPS.paintFormXObjectEnd:
-        ctm = stack.pop() ?? identity;
+        pop();
+        break;
+      case OPS.beginGroup: {
+        const smask = args?.[0]?.smask;
+        groups.push({
+          isMask: !!smask,
+          subtype: smask?.subtype ?? "Alpha",
+          backdrop: smask?.backdrop ?? null,
+          layers: []
+        });
+        push();
+        break;
+      }
+      case OPS.endGroup: {
+        const group = groups.pop();
+        pop();
+        if (group?.isMask) pendingMask = group;
+        break;
+      }
+      case OPS.setGState:
+        for (const [key, value] of args?.[0] ?? []) {
+          if (key !== "SMask") continue;
+          state = { ...state, mask: value && pendingMask?.layers.length ? pendingMask : null };
+          if (value) pendingMask = null;
+        }
         break;
       case OPS.transform:
-        ctm = Util.transform(ctm, args);
+        state = { ...state, ctm: Util.transform(state.ctm, args) };
         break;
       case OPS.paintFormXObjectBegin:
-        stack.push(ctm);
-        if (Array.isArray(args?.[0]) || ArrayBuffer.isView(args?.[0])) ctm = Util.transform(ctm, Array.from(args[0]));
+        push();
+        if (Array.isArray(args?.[0]) || ArrayBuffer.isView(args?.[0])) {
+          state = { ...state, ctm: Util.transform(state.ctm, Array.from(args[0])) };
+        }
         break;
       case OPS.paintImageXObject:
-        found.push({ id: args[0], width: args[1], height: args[2], ctm });
+        record({ id: args[0], width: args[1], height: args[2], ctm: state.ctm });
         break;
       case OPS.paintInlineImageXObject:
-        found.push({ id: null, inline: args[0], width: args[0]?.width, height: args[0]?.height, ctm });
+        record({ id: null, inline: args[0], width: args[0]?.width, height: args[0]?.height, ctm: state.ctm });
         break;
       default:
         break;
     }
   }
 
-  const placed = [];
   const cache = new Map();
-  for (const entry of found) {
+  const resolve = async entry => {
     const matrix = Util.transform(viewport.transform, entry.ctm);
     const [a, b, c, d, e, f] = matrix;
     const corners = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => [a * u + c * v + e, b * u + d * v + f]);
-    const xs = corners.map(c => c[0]);
-    const ys = corners.map(c => c[1]);
+    const xs = corners.map(p => p[0]);
+    const ys = corners.map(p => p[1]);
     const box = { x0: Math.min(...xs), x1: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
     let source = entry.inline ?? null;
     if (!source && entry.id) {
       if (!cache.has(entry.id)) cache.set(entry.id, getObject(page, entry.id, timeout));
       source = await cache.get(entry.id);
     }
-    if (!source) continue;
-    placed.push({
+    if (!source) return null;
+    return {
       ...box,
       objId: entry.id,
       matrix,
       source,
       pixelWidth: source.width ?? entry.width,
       pixelHeight: source.height ?? entry.height
-    });
+    };
+  };
+
+  const placed = [];
+  const masks = new Map();
+  for (const entry of found) {
+    const image = await resolve(entry);
+    if (!image) continue;
+    if (entry.mask) {
+      if (!masks.has(entry.mask)) {
+        const layers = (await Promise.all(entry.mask.layers.map(resolve))).filter(Boolean);
+        masks.set(entry.mask, layers.length ? { subtype: entry.mask.subtype, layers } : null);
+      }
+      image.mask = masks.get(entry.mask);
+    }
+    placed.push(image);
   }
   return placed;
 }
