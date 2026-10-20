@@ -86,6 +86,50 @@
 
 /* ---- Import dialog ------------------------------------------------------------ */
 
+/* Options scroll; the Import button stays pinned at the bottom of the window. */
+.pdfj-app .window-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pdfj-app .pdfj-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.pdfj-app .pdfj-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.pdfj-app .pdfj-body > .form-footer {
+  flex: none;
+  margin-top: 0.5rem;
+}
+
+.pdfj-app .pdfj-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.pdfj-app .pdfj-range input {
+  flex: 1;
+}
+
+.pdfj-app .pdfj-range-value {
+  flex: 0 0 2.5em;
+  text-align: right;
+}
+
 .pdfj-app .form-group .hint {
   flex: 0 0 100%;
 }

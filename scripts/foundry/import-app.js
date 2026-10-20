@@ -25,7 +25,7 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: "form",
     classes: ["pdfj-app"],
     window: { title: "PDFJ.Title", icon: "fa-solid fa-file-pdf", resizable: true },
-    position: { width: 520, height: "auto" },
+    position: { width: 540, height: Math.min(800, window.innerHeight - 60) },
     form: { handler: PdfImportApp.#onSubmit, closeOnSubmit: false, submitOnChange: false }
   };
 
@@ -63,6 +63,8 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       label.textContent = file ? file.name : game.i18n.localize("PDFJ.NoFile");
       if (file && !nameInput.value) nameInput.value = file.name.replace(/\.pdf$/i, "");
     };
+    const range = form.querySelector("input[name=backgroundTolerance]");
+    range?.addEventListener("input", () => (form.querySelector(".pdfj-range-value").textContent = range.value));
     zone.addEventListener("click", () => input.click());
     input.addEventListener("change", showFile);
     zone.addEventListener("dragover", ev => {
