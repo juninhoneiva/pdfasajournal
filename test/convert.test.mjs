@@ -155,3 +155,17 @@ test("soft masks: the mask image is not extracted, it becomes the alpha of the m
   assert.equal(alphas[0].center, 255, "inside the mask is opaque");
   assert.equal((result.pages[0].html.match(/<img/g) ?? []).length, 1);
 });
+
+test("a paragraph cut by the page break is joined back", async () => {
+  const { result } = await convert("page-break.pdf");
+  assert.equal(result.pages.length, 1);
+  const html = result.pages[0].html;
+  assert.match(html, /<p>Os trens de Londres[^<]* Existem passagens de primeira e de terceira classe\.[^<]*<\/p>/);
+  assert.match(html, /<p>Outro paragrafo/, "the next paragraph stays separate");
+  assert.equal((html.match(/>passagens de primeira/g) ?? []).length, 0, "no orphan fragment left");
+});
+
+test("joining can be turned off", async () => {
+  const { result } = await convert("page-break.pdf", { joinContinuations: false });
+  assert.match(result.pages[0].html, /<p>passagens de primeira/);
+});

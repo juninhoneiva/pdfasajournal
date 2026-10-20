@@ -31,7 +31,9 @@
       "SkipRepeatedHint": "Imagens que se repetem em muitas páginas (molduras, vinhetas) são omitidas.",
       "MaxImageSize": "Tamanho máximo da imagem (px)",
       "GroupBy": "Páginas do journal",
-      "GroupByHint": "Por seção: cada título do livro vira uma página do journal e as páginas sem título se juntam à seção anterior. Por página: uma página do journal para cada página do PDF."
+      "GroupByHint": "Por seção: cada título do livro vira uma página do journal e as páginas sem título se juntam à seção anterior. Por página: uma página do journal para cada página do PDF.",
+      "JoinContinuations": "Emendar texto quebrado entre páginas",
+      "JoinContinuationsHint": "Um parágrafo que o livro dividiu na virada de página (fim da última coluna e início da primeira coluna da página seguinte) volta a ser um só. No modo de colunas fluido, vale também entre colunas."
     },
     "ColumnMode": {
       "Grid": "Fiel ao PDF",

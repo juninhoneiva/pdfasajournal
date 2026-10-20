@@ -1,6 +1,6 @@
 {
   "name": "pdf-as-journal",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "Foundry VTT module: import a PDF as a Journal Entry preserving layout (columns, headings, images).",

@@ -52,7 +52,7 @@ export function computeStats(layouts) {
   return { bodySize, levels };
 }
 
-function headingLevel(paragraph, stats) {
+export function headingLevel(paragraph, stats) {
   if (paragraph.chars > 200 || paragraph.size < stats.bodySize * 1.18) return 0;
   return stats.levels.get(Math.round(paragraph.size * 2) / 2) ?? 4;
 }

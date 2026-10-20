@@ -31,7 +31,9 @@
       "SkipRepeatedHint": "Images repeated on many pages (frames, flourishes) are left out.",
       "MaxImageSize": "Maximum image size (px)",
       "GroupBy": "Journal pages",
-      "GroupByHint": "By section: each book heading becomes a journal page and untitled pages join the previous section. By page: one journal page per PDF page."
+      "GroupByHint": "By section: each book heading becomes a journal page and untitled pages join the previous section. By page: one journal page per PDF page.",
+      "JoinContinuations": "Join text split across pages",
+      "JoinContinuationsHint": "A paragraph the book split at a page break (end of the last column, start of the next page's first column) is joined back. In flowing column mode, this also applies between columns."
     },
     "ColumnMode": {
       "Grid": "Faithful to the PDF",

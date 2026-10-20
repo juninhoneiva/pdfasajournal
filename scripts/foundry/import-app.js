@@ -17,6 +17,7 @@ const STORED_OPTIONS = [
   "columnMode",
   "groupBy",
   "joinHyphens",
+  "joinContinuations",
   "maxImageSize"
 ];
 
@@ -109,7 +110,7 @@ export class PdfImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const data = formData.object;
     const options = {};
     for (const key of STORED_OPTIONS) if (key in data) options[key] = data[key];
-    for (const key of ["images", "transparentBackgrounds", "includePageBackgrounds", "skipRepeatedImages", "removeHeadersFooters", "joinHyphens"]) {
+    for (const key of ["images", "transparentBackgrounds", "includePageBackgrounds", "skipRepeatedImages", "removeHeadersFooters", "joinHyphens", "joinContinuations"]) {
       options[key] = !!data[key];
     }
     options.backgroundTolerance = Number(options.backgroundTolerance) || DEFAULT_OPTIONS.backgroundTolerance;

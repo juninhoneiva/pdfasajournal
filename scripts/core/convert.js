@@ -10,6 +10,7 @@
 import { extractPage } from "./extract.js";
 import { layoutPage } from "./layout.js";
 import { computeStats, firstHeading, renderPage } from "./html.js";
+import { joinContinuations } from "./continuity.js";
 import { applyMask, hasTransparency, placeImage, removeBackground, sourceToCanvas } from "./raster.js";
 import { parsePageRange } from "./util.js";
 
@@ -24,6 +25,7 @@ export const DEFAULT_OPTIONS = {
   columnMode: "grid",
   groupBy: "section",
   joinHyphens: true,
+  joinContinuations: true,
   maxImageSize: 2048,
   pageLabel: "Page {n}",
   documentParams: {}
@@ -261,10 +263,9 @@ function groupSections(layouts, stats, outline, options) {
     const bookmark = outline.get(layout.number)?.title;
     const opens = heading && heading.charsBefore <= SECTION_LEAD;
     const current = sections.at(-1);
-    const html = renderPage(layout, stats, options);
     if (current && !bookmark && !opens) {
       current.numbers.push(layout.number);
-      current.html += html;
+      current.layouts.push(layout);
       continue;
     }
     const name = bookmark || (opens ? heading.text : null) || options.pageLabel.replace("{n}", layout.number);
@@ -273,10 +274,15 @@ function groupSections(layouts, stats, outline, options) {
       numbers: [layout.number],
       name,
       showTitle: !(opens && name === heading.text),
-      html
+      layouts: [layout]
     });
   }
-  return sections;
+  return sections.map(({ layouts: pages, ...section }) => {
+    if (options.joinContinuations) {
+      joinContinuations(pages, stats, { acrossColumns: options.columnMode === "flow" });
+    }
+    return { ...section, html: pages.map(layout => renderPage(layout, stats, options)).join("") };
+  });
 }
 
 /* -------------------------------------------------------------------------- */

@@ -171,5 +171,19 @@ def soft_mask():
     out += f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
     open(os.path.join(OUT, "soft-mask.pdf"), "wb").write(out)
 
-make_images(); two_columns(); three_columns(); art_page(); sections(); soft_mask()
+def page_break():
+    """Two-column section whose last paragraph is cut mid-sentence by the page break."""
+    c = canvas.Canvas(os.path.join(OUT, "page-break.pdf"), pagesize=A4)
+    W, H = A4
+    colw = (W - 100 - 20) / 2
+    c.setFont("Helvetica-Bold", 20); c.drawString(50, H - 70, "VIAGEM")
+    column(c, 50, H - 110, colw, [("p", words(120, 1) + ".")])
+    column(c, 50 + colw + 20, H - 110, colw, [("p", words(60, 2) + "."), ("p", "Os trens de Londres sao operados por quatro grupos privados. " + words(30, 4) + " Existem")])
+    c.showPage()
+    column(c, 50, H - 80, colw, [("p", "passagens de primeira e de terceira classe. " + words(20, 3) + "."), ("p", "Outro paragrafo " + words(40, 5) + ".")])
+    column(c, 50 + colw + 20, H - 80, colw, [("p", words(50, 6) + ".")])
+    c.showPage()
+    c.save()
+
+make_images(); two_columns(); three_columns(); art_page(); sections(); soft_mask(); page_break()
 print("ok")
